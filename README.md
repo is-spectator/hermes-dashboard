@@ -24,13 +24,13 @@ This project is **not** a fork of the official dashboard. It is built from scrat
 ## Features
 
 - **Overview** -- Aggregated status dashboard with metric cards, gateway grid, activity feed
-- **Providers** -- Key management with OAuth and API key provider cards
+- **Providers** -- Key management: add and remove API keys
 - **Sessions** -- Searchable session table with detail drawer
-- **Skills** -- Card grid with category filters and enable/disable toggles
+- **Skills** -- Read-only card grid with category filters (read-only in v0.1.0)
 - **Logs** -- Terminal-style real-time log viewer with level filtering
-- **Cron** -- Scheduled task management with create/edit/delete
+- **Cron** -- Scheduled task management (placeholder -- API not available in v0.9.0)
 - **Gateways** -- Connection status cards with breathing animations
-- **Settings** -- Theme switching, API connection config, about info
+- **Settings** -- Theme switching, API connection config, about info (config is read-only in v0.1.0)
 - **Dark / Light themes** -- Design-token driven, with `prefers-reduced-motion` support
 
 ## Quick Start
@@ -55,6 +55,13 @@ The dev server starts on `http://localhost:3000` and proxies `/api/*` requests t
    VITE_HERMES_API_URL=http://192.168.1.50:9119 npm run dev
    ```
 2. In-app via the **Settings** page (persisted to local storage).
+
+### Running tests
+
+```bash
+npm test         # single run
+npm run test:watch  # watch mode
+```
 
 ### Production build
 
@@ -110,8 +117,8 @@ cp -r dist/* ~/.hermes/hermes-agent/hermes_cli/web_dist/
 
 | Metric | Target | Actual |
 |--------|--------|--------|
-| JS Bundle (gzipped) | < 120 KB | ~96 KB |
-| CSS (gzipped) | < 15 KB | ~7.7 KB |
+| JS Bundle (gzipped) | < 120 KB | ~105 KB |
+| CSS (gzipped) | < 15 KB | ~9.4 KB |
 
 ## Contributing
 

@@ -730,6 +730,24 @@ These paths were tested and confirmed to **not exist** (all return SPA HTML fall
 
 ---
 
+## Confirmed Write Contracts
+
+The following write operations have been tested and verified against Hermes Agent v0.9.0:
+
+| Endpoint | Method | Request Body | Response |
+|---|---|---|---|
+| `/api/env` | PUT | `{"key": "<name>", "value": "<value>"}` | `{"ok": true, "key": "<name>"}` |
+| `/api/config` | PUT | `{"config": { ...partial config... }}` | `{"ok": true}` |
+| `/api/env` | DELETE | `{"key": "<name>"}` | `{"ok": true, "key": "<name>"}` |
+
+**Important:**
+- All write endpoints use **PUT** (not POST). POST returns 405.
+- `PUT /api/config` requires the partial config to be wrapped in a `{"config": ...}` envelope. Sending the config object directly returns 422.
+- `PUT /api/env` expects `{key, value}` as top-level fields.
+- `DELETE /api/env` expects `{key}` in the request body (not as a URL parameter).
+
+---
+
 ## Dashboard Integration Notes
 
 1. **Health checks:** Use `GET /api/status` (no auth) as the liveness probe. Do not use `/health`.
