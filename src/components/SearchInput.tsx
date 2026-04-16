@@ -28,6 +28,7 @@ export default function SearchInput({ value, onChange, placeholder = 'Search...'
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
         placeholder={placeholder}
+        aria-label={placeholder}
         className="w-full h-9 pl-9 pr-8 rounded-[var(--radius-md)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none transition-all duration-200"
         style={{
           background: 'rgba(255,255,255,0.04)',
@@ -40,6 +41,7 @@ export default function SearchInput({ value, onChange, placeholder = 'Search...'
       {value && (
         <button
           onClick={() => onChange('')}
+          aria-label="Clear search"
           className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--accent)]"
         >
           <X size={12} />

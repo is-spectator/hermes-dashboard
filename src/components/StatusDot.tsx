@@ -40,7 +40,7 @@ export default function StatusDot({ status, showLabel = false, size = 'sm' }: St
   const dotSize = size === 'sm' ? 'w-2 h-2' : 'w-2.5 h-2.5'
 
   return (
-    <span className="inline-flex items-center gap-1.5">
+    <span className="inline-flex items-center gap-1.5" aria-label={`Status: ${label}`}>
       <span className="relative inline-flex">
         {/* Outer pulse ring */}
         {pulse && (

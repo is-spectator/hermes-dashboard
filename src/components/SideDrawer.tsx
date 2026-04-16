@@ -32,9 +32,13 @@ export default function SideDrawer({ open, onClose, title, children, width = '48
           WebkitBackdropFilter: 'blur(16px)',
         }}
         onClick={onClose}
+        aria-hidden="true"
       />
       {/* Drawer panel -- glass */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={title || 'Side drawer'}
         className="fixed top-0 right-0 z-50 h-screen overflow-y-auto"
         style={{
           width,
@@ -54,6 +58,7 @@ export default function SideDrawer({ open, onClose, title, children, width = '48
             <h2 className="text-sm font-semibold text-[var(--text-primary)]">{title}</h2>
             <button
               onClick={onClose}
+              aria-label="Close drawer"
               className="p-1.5 rounded-[var(--radius-md)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-white/[0.04] transition-colors"
             >
               <X size={16} />

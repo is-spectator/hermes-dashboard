@@ -75,7 +75,7 @@ export default function DataTable<T>({
       }}
     >
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full" aria-label="Data table">
           <thead>
             <tr className="relative" style={{ background: 'rgba(255,255,255,0.04)' }}>
               {columns.map((col) => (
@@ -105,6 +105,16 @@ export default function DataTable<T>({
                 style={{
                   animation: `fade-in-up 200ms ease-out ${index * 30}ms both`,
                 }}
+                {...(onRowClick ? {
+                  role: 'button' as const,
+                  tabIndex: 0,
+                  onKeyDown: (e: React.KeyboardEvent<HTMLTableRowElement>) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      onRowClick(row)
+                    }
+                  },
+                } : {})}
                 onMouseEnter={(e) => {
                   if (onRowClick) {
                     e.currentTarget.style.background = 'rgba(255,255,255,0.04)'

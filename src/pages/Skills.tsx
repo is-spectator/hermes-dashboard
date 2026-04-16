@@ -113,6 +113,10 @@ export default function Skills() {
               </div>
               {/* Read-only toggle -- no enable/disable endpoint in Hermes v0.9.0 */}
               <div
+                role="switch"
+                aria-checked={skill.enabled}
+                aria-disabled="true"
+                aria-label={`${skill.name} toggle (read-only)`}
                 className={cn(
                   'w-8 h-4 rounded-full relative cursor-not-allowed opacity-60 transition-all duration-300',
                   skill.enabled ? 'bg-[var(--accent)]' : 'bg-[rgba(255,255,255,0.08)]'
