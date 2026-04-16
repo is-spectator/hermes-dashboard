@@ -11,10 +11,6 @@ export default defineConfig({
         target: process.env.VITE_HERMES_API_URL || 'http://127.0.0.1:9119',
         changeOrigin: true,
       },
-      '/health': {
-        target: process.env.VITE_HERMES_API_URL || 'http://127.0.0.1:9119',
-        changeOrigin: true,
-      },
       '/__hermes_root__': {
         target: process.env.VITE_HERMES_API_URL || 'http://127.0.0.1:9119',
         changeOrigin: true,

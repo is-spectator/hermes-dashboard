@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Sun, Moon, ExternalLink, RefreshCw } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import Button from '../components/Button'
 import { useAppStore } from '../stores/useAppStore'
 import { cn } from '../lib/utils'
@@ -11,12 +12,14 @@ export default function Settings() {
   const [apiUrl, setApiUrl] = useState(hermesApiUrl)
   const [saved, setSaved] = useState(false)
 
+  const queryClient = useQueryClient()
   const { data: status } = useStatus()
   const { data: config, isLoading: configLoading } = useConfig()
 
   const saveConnection = () => {
     setHermesApiUrl(apiUrl)
     clearToken() // Clear cached token when URL changes
+    queryClient.invalidateQueries() // Re-fetch all data with the new URL
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }

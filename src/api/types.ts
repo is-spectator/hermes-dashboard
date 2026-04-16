@@ -1,10 +1,6 @@
 // Hermes Agent API response types
 // Matched against real Hermes Agent v0.9.0 API
 
-export interface HealthResponse {
-  status: string
-}
-
 export interface AgentStatus {
   version: string
   release_date: string
@@ -73,6 +69,12 @@ export interface Session {
 export interface SessionsResponse {
   sessions: Session[]
 }
+
+/**
+ * The /api/sessions/:id detail endpoint returns a subset of Session fields.
+ * Notably it does NOT include `last_active`, `preview`, or `is_active`.
+ */
+export type SessionDetail = Omit<Session, 'last_active' | 'preview' | 'is_active'>
 
 export interface Skill {
   name: string

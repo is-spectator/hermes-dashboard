@@ -36,8 +36,13 @@ function ConnectionStatus() {
   useEffect(() => {
     const check = async () => {
       try {
-        const res = await fetch('/health', { signal: AbortSignal.timeout(3000) })
-        setStatus(res.ok ? 'connected' : 'disconnected')
+        const baseUrl = localStorage.getItem('hermes-api-url') || import.meta.env.VITE_HERMES_API_URL || ''
+        const res = await fetch(`${baseUrl}/api/status`, { signal: AbortSignal.timeout(3000) })
+        if (!res.ok) { setStatus('disconnected'); return }
+        const contentType = res.headers.get('content-type') || ''
+        if (!contentType.includes('application/json')) { setStatus('disconnected'); return }
+        const data = await res.json()
+        setStatus(data.version ? 'connected' : 'disconnected')
       } catch {
         setStatus('disconnected')
       }

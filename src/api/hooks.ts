@@ -36,6 +36,14 @@ export function useUpdateEnv() {
   })
 }
 
+export function useDeleteEnvKey() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: api.deleteEnvKey,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['env'] }),
+  })
+}
+
 // Sessions
 export function useSessions(params?: { search?: string; source?: string }) {
   return useQuery({
