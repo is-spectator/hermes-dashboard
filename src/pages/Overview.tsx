@@ -1,5 +1,7 @@
 import { useNavigate } from 'react-router-dom'
-import { Activity, Radio, Zap, MessageSquare, Clock, AlertCircle } from 'lucide-react'
+import { Radio, Zap, MessageSquare, Clock, AlertCircle, Activity } from 'lucide-react'
+import PageHeader from '../components/PageHeader'
+import Panel from '../components/Panel'
 import StatCard from '../components/StatCard'
 import StatusBadge from '../components/StatusBadge'
 import Badge from '../components/Badge'
@@ -48,7 +50,6 @@ export default function Overview() {
   const connectedPlatforms = gatewayPlatforms.filter((p) => p.connected).length
   const agentStatus: 'online' | 'degraded' | 'offline' = (() => {
     if (statusError || !status) return 'offline'
-    // Gateway running but some platforms disconnected => degraded
     if (
       status.gateway_running &&
       gatewayPlatforms.length > 0 &&
@@ -64,7 +65,9 @@ export default function Overview() {
 
   return (
     <div className="space-y-6">
-      {/* Metric Cards */}
+      <PageHeader title="Overview" description="Agent health and activity summary" />
+
+      {/* KPI Strip */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Agent Status"
@@ -101,61 +104,61 @@ export default function Overview() {
 
       {/* Error banner when status API fails */}
       {statusError && (
-        <section className="rounded-[var(--radius-md)] p-4 bg-[var(--danger-soft)] border border-[var(--danger)]/20">
+        <div className="rounded-[var(--radius-md)] p-4 bg-[var(--danger-soft)] border border-[var(--danger)]/20">
           <div className="flex items-center gap-2 text-[var(--danger)]">
             <AlertCircle size={16} />
             <span className="text-sm font-medium">
               Failed to connect to agent &mdash; status API returned an error.
             </span>
           </div>
-        </section>
+        </div>
       )}
 
-      {/* Gateway Status Grid */}
+      {/* Gateway Platforms */}
       {gatewayPlatforms.length > 0 && (
-        <section>
-          <h2 className="text-xs font-medium uppercase tracking-wide text-[var(--text-tertiary)] mb-3">Gateway Platforms</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <Panel title="Gateway Platforms">
+          <div className="divide-y divide-[var(--border-default)] -mx-4 -mb-4">
             {gatewayPlatforms
               .sort((a, b) => Number(b.connected) - Number(a.connected))
               .map((gw) => (
                 <button
                   key={gw.name}
                   onClick={() => navigate('/gateways')}
-                  className="flex flex-col items-center gap-2 p-4 rounded-[var(--radius-md)] cursor-pointer bg-[var(--bg-surface)] border border-[var(--border-default)] hover:bg-[var(--bg-surface-2)] transition-colors"
-                  style={{ opacity: gw.connected ? 1 : 0.5 }}
+                  className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-[var(--bg-surface-2)] transition-colors cursor-pointer"
                 >
-                  <Radio size={20} className={gw.connected ? 'text-[var(--success)]' : 'text-[var(--text-tertiary)]'} />
-                  <span className="text-xs font-medium text-[var(--text-primary)] capitalize">{gw.name}</span>
                   <StatusBadge status={gw.connected ? 'online' : 'offline'} />
+                  <span className="text-sm text-[var(--text-primary)] capitalize">{gw.name}</span>
+                  <Badge variant={gw.connected ? 'success' : 'neutral'}>
+                    {gw.connected ? 'Connected' : 'Disconnected'}
+                  </Badge>
                 </button>
               ))}
           </div>
-        </section>
+        </Panel>
       )}
 
       {!status?.gateway_running && gatewayPlatforms.length === 0 && (
-        <section className="rounded-[var(--radius-md)] p-5 bg-[var(--bg-surface)] border border-[var(--border-default)]">
+        <div className="rounded-[var(--radius-md)] p-4 bg-[var(--bg-surface)] border border-[var(--border-default)]">
           <div className="flex items-center gap-2 text-[var(--text-tertiary)]">
             <AlertCircle size={16} />
             <span className="text-sm">Gateway is not running. No platforms connected.</span>
           </div>
-        </section>
+        </div>
       )}
 
-      {/* Bottom Split: Recent Sessions + Provider Health */}
+      {/* Bottom Split: Recent Sessions + Provider Keys */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Sessions */}
-        <section className="rounded-[var(--radius-md)] bg-[var(--bg-surface)] border border-[var(--border-default)] overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--border-default)]">
-            <h2 className="text-sm font-medium text-[var(--text-primary)]">Recent Sessions</h2>
+        <section className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-md)] overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-default)]">
+            <h2 className="text-xs font-medium uppercase tracking-wide text-[var(--text-tertiary)]">Recent Sessions</h2>
             <Activity size={14} className="text-[var(--text-tertiary)]" />
           </div>
           <div className="divide-y divide-[var(--border-default)]">
             {sessionsLoading && (
-              <div className="space-y-0">
+              <>
                 {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="flex items-center gap-3 px-5 py-3">
+                  <div key={i} className="flex items-center gap-3 px-4 py-3">
                     <SkeletonLoader className="w-4 h-4 rounded-full" />
                     <div className="flex-1 space-y-2">
                       <SkeletonLoader className="h-3.5 w-3/4" />
@@ -163,22 +166,30 @@ export default function Overview() {
                     </div>
                   </div>
                 ))}
-              </div>
+              </>
             )}
             {sessionsError && !sessionsLoading && (
-              <div className="px-5 py-6 text-center text-sm text-[var(--danger)] flex items-center justify-center gap-2">
+              <div className="px-4 py-4 flex items-center gap-2 text-sm text-[var(--danger)]">
                 <AlertCircle size={14} />
                 Failed to load sessions
               </div>
             )}
             {!sessionsLoading && !sessionsError && recentSessions.length === 0 && (
-              <div className="px-5 py-6 text-center text-sm text-[var(--text-tertiary)]">No sessions recorded yet</div>
+              <div className="px-4 py-6 text-center text-sm text-[var(--text-tertiary)]">No sessions recorded yet</div>
             )}
             {!sessionsLoading && !sessionsError && recentSessions.map((session) => (
               <div
                 key={session.id}
-                className="flex items-start gap-3 px-5 py-3 cursor-pointer hover:bg-[var(--bg-surface-2)] transition-colors"
+                className="flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-[var(--bg-surface-2)] transition-colors"
                 onClick={() => navigate('/sessions')}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    navigate('/sessions')
+                  }
+                }}
               >
                 <span className="mt-0.5 text-[var(--text-tertiary)]">
                   {session.is_active ? <Clock size={14} /> : <MessageSquare size={14} />}
@@ -199,16 +210,16 @@ export default function Overview() {
           </div>
         </section>
 
-        {/* Provider Health Summary */}
-        <section className="rounded-[var(--radius-md)] bg-[var(--bg-surface)] border border-[var(--border-default)] overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--border-default)]">
-            <h2 className="text-sm font-medium text-[var(--text-primary)]">Provider Keys</h2>
+        {/* Provider Keys */}
+        <section className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-md)] overflow-hidden">
+          <div className="px-4 py-3 border-b border-[var(--border-default)]">
+            <h2 className="text-xs font-medium uppercase tracking-wide text-[var(--text-tertiary)]">Provider Keys</h2>
           </div>
           <div className="divide-y divide-[var(--border-default)]">
             {envLoading && (
-              <div className="space-y-0">
+              <>
                 {Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="flex items-center justify-between px-5 py-3">
+                  <div key={i} className="flex items-center justify-between px-4 py-3">
                     <div className="flex items-center gap-3">
                       <SkeletonLoader className="w-2 h-2 rounded-full" />
                       <SkeletonLoader className="h-3.5 w-24" />
@@ -216,21 +227,21 @@ export default function Overview() {
                     <SkeletonLoader className="h-5 w-16 rounded-[var(--radius-sm)]" />
                   </div>
                 ))}
-              </div>
+              </>
             )}
             {envError && !envLoading && (
-              <div className="px-5 py-6 text-center text-sm text-[var(--danger)] flex items-center justify-center gap-2">
+              <div className="px-4 py-4 flex items-center gap-2 text-sm text-[var(--danger)]">
                 <AlertCircle size={14} />
                 Failed to load provider keys
               </div>
             )}
             {!envLoading && !envError && providerEntries.length === 0 && (
-              <div className="px-5 py-6 text-center text-sm text-[var(--text-tertiary)]">No provider keys found</div>
+              <div className="px-4 py-6 text-center text-sm text-[var(--text-tertiary)]">No provider keys found</div>
             )}
             {!envLoading && !envError && providerEntries.map((provider) => (
               <div
                 key={provider.envKey}
-                className="flex items-center justify-between px-5 py-3"
+                className="flex items-center justify-between px-4 py-3"
               >
                 <div className="flex items-center gap-3">
                   <StatusBadge status={provider.configured ? 'online' : 'unknown'} />

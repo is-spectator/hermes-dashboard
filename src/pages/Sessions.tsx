@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react'
 import { MessageSquare, Terminal, Hash, Wrench, DollarSign, AlertCircle } from 'lucide-react'
+import PageHeader from '../components/PageHeader'
 import StatCard from '../components/StatCard'
 import DataTable, { type Column } from '../components/DataTable'
 import SearchInput from '../components/SearchInput'
 import SideDrawer from '../components/SideDrawer'
 import Badge from '../components/Badge'
-import { formatRelativeTime } from '../lib/utils'
+import { formatRelativeTime, cn } from '../lib/utils'
 import { useDebounce } from '../lib/useDebounce'
 import { useSessions, useSessionMessages } from '../api/hooks'
 import type { Session } from '../api/types'
@@ -15,6 +16,11 @@ const roleBadge: Record<string, 'info' | 'success' | 'warning' | 'neutral'> = {
   assistant: 'success',
   system: 'neutral',
   tool: 'warning',
+}
+
+const roleBorderClass: Record<string, string> = {
+  user: 'border-l-[var(--accent)]',
+  assistant: 'border-l-[var(--success)]',
 }
 
 function SessionDetail({ session }: { session: Session }) {
@@ -44,7 +50,7 @@ function SessionDetail({ session }: { session: Session }) {
               ) : item.badgeVariant ? (
                 <Badge variant={item.badgeVariant}>{item.value}</Badge>
               ) : (
-                <span className={`text-sm text-[var(--text-primary)] ${item.mono ? 'font-[var(--font-mono)]' : ''}`}>
+                <span className={cn('text-sm text-[var(--text-primary)]', item.mono && 'font-[var(--font-mono)]')}>
                   {item.value}
                 </span>
               )}
@@ -79,10 +85,10 @@ function SessionDetail({ session }: { session: Session }) {
                 </Badge>
               </div>
               <div
-                className="text-sm text-[var(--text-primary)] pl-3 whitespace-pre-wrap break-words leading-relaxed border-l-2"
-                style={{
-                  borderColor: msg.role === 'user' ? 'var(--accent)' : msg.role === 'assistant' ? 'var(--success)' : 'var(--border-default)',
-                }}
+                className={cn(
+                  'text-sm text-[var(--text-primary)] pl-3 whitespace-pre-wrap break-words leading-relaxed border-l-2',
+                  roleBorderClass[msg.role] || 'border-l-[var(--border-default)]'
+                )}
               >
                 {msg.content.length > 800 ? msg.content.slice(0, 800) + '...' : msg.content}
               </div>
@@ -188,7 +194,6 @@ export default function Sessions() {
   const sessions = useMemo(() => sessionsData?.sessions ?? [], [sessionsData])
 
   // Derive unique sources for filter — always fetch unfiltered list for the toolbar
-  // We use a separate unfiltered query to populate the source buttons
   const { data: allSessionsData } = useSessions()
   const allSessions = useMemo(() => allSessionsData?.sessions ?? [], [allSessionsData])
 
@@ -204,7 +209,9 @@ export default function Sessions() {
 
   return (
     <div className="space-y-6">
-      {/* Stats */}
+      <PageHeader title="Sessions" description="Browse and inspect agent sessions" />
+
+      {/* KPI Strip */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Total Sessions" value={totalSessionCount} />
         <StatCard title="Active" value={allSessions.filter((s) => s.is_active).length} subtitle="sessions" />
@@ -212,19 +219,20 @@ export default function Sessions() {
         <StatCard title="Total Cost" value={`$${totalCost.toFixed(2)}`} icon={<DollarSign size={16} />} animate={false} />
       </div>
 
-      {/* Toolbar */}
+      {/* Filter Bar */}
       <div className="flex items-center gap-3 flex-wrap">
         <SearchInput value={search} onChange={setSearch} placeholder="Search sessions..." className="w-64" />
-        <div className="flex rounded-[var(--radius-md)] overflow-hidden border border-[var(--border-default)]">
+        <div className="flex items-center gap-1.5">
           {sources.map((p) => (
             <button
               key={p}
               onClick={() => setSourceFilter(p)}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+              className={cn(
+                'px-3 py-1.5 text-xs font-medium rounded-[var(--radius-sm)] transition-colors',
                 sourceFilter === p
-                  ? 'bg-[var(--accent)] text-white'
-                  : 'text-[var(--text-secondary)] hover:bg-[var(--bg-surface-2)] hover:text-[var(--text-primary)]'
-              }`}
+                  ? 'bg-[var(--accent-soft)] text-[var(--accent)]'
+                  : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-surface-2)] hover:text-[var(--text-primary)]'
+              )}
             >
               {p}
             </button>
@@ -232,11 +240,11 @@ export default function Sessions() {
         </div>
       </div>
 
-      {/* Table — error state takes priority over empty state */}
+      {/* Table or error */}
       {error ? (
-        <div className="flex items-center gap-3 rounded-[var(--radius-md)] p-6 text-sm bg-[var(--danger-soft)] border border-[var(--danger)]/20">
-          <AlertCircle size={18} className="text-[var(--danger)] shrink-0" />
-          <span className="text-[var(--danger)]">
+        <div className="flex items-center gap-3 rounded-[var(--radius-md)] p-4 bg-[var(--danger-soft)] border border-[var(--danger)]/20">
+          <AlertCircle size={16} className="text-[var(--danger)] shrink-0" />
+          <span className="text-sm text-[var(--danger)]">
             Failed to load sessions: {error instanceof Error ? error.message : 'Unknown error'}
           </span>
         </div>

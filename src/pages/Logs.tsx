@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { ArrowDown, AlertTriangle } from 'lucide-react'
+import { ArrowDown, AlertCircle } from 'lucide-react'
+import PageHeader from '../components/PageHeader'
 import SearchInput from '../components/SearchInput'
 import { cn } from '../lib/utils'
 import { useLogs } from '../api/hooks'
@@ -152,20 +153,12 @@ export default function Logs() {
   const levelBtnClass = (level: LogLevel | 'ALL') => {
     const active = activeLevels.has(level)
     if (!active) {
-      return 'border border-[var(--border-default)] text-[var(--text-tertiary)] opacity-50 bg-transparent'
+      return 'text-[var(--text-tertiary)] hover:bg-[var(--bg-surface-2)] hover:text-[var(--text-primary)]'
     }
-    if (level === 'ERROR') return 'bg-[var(--danger-soft)] border border-[var(--danger)]/20 text-[var(--danger)]'
-    if (level === 'WARN') return 'bg-[var(--warning-soft)] border border-[var(--warning)]/20 text-[var(--warning)]'
-    if (level === 'DEBUG') return 'bg-[var(--bg-surface-2)] border border-[var(--border-default)] text-[var(--text-tertiary)]'
-    return 'bg-[var(--accent-soft)] border border-[var(--accent)]/20 text-[var(--accent)]'
-  }
-
-  const fileBtnClass = (file: LogFile) => {
-    const active = logFile === file
-    if (!active) {
-      return 'border border-[var(--border-default)] text-[var(--text-tertiary)] opacity-60 bg-transparent'
-    }
-    return 'bg-[var(--accent-soft)] border border-[var(--accent)]/20 text-[var(--accent)]'
+    if (level === 'ERROR') return 'bg-[var(--danger-soft)] text-[var(--danger)]'
+    if (level === 'WARN') return 'bg-[var(--warning-soft)] text-[var(--warning)]'
+    if (level === 'DEBUG') return 'bg-[var(--bg-surface-2)] text-[var(--text-tertiary)]'
+    return 'bg-[var(--accent-soft)] text-[var(--accent)]'
   }
 
   const totalLines = logsData?.lines?.length ?? 0
@@ -173,6 +166,8 @@ export default function Logs() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)]">
+      <PageHeader title="Logs" description="Real-time agent and gateway logs" />
+
       {/* Toolbar */}
       <div className="flex items-center gap-3 mb-4 flex-wrap">
         {/* File selector */}
@@ -181,7 +176,12 @@ export default function Logs() {
             <button
               key={file}
               onClick={() => setLogFile(file)}
-              className={cn('px-2.5 py-1 text-xs font-medium rounded-[var(--radius-sm)] transition-colors capitalize', fileBtnClass(file))}
+              className={cn(
+                'px-2.5 py-1 text-xs font-medium rounded-[var(--radius-sm)] transition-colors capitalize',
+                logFile === file
+                  ? 'bg-[var(--accent-soft)] text-[var(--accent)]'
+                  : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-surface-2)] hover:text-[var(--text-primary)]'
+              )}
             >
               {file}
             </button>
@@ -207,10 +207,10 @@ export default function Logs() {
         <button
           onClick={() => setAutoScroll(!autoScroll)}
           className={cn(
-            'ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-[var(--radius-md)] border transition-colors',
+            'ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-[var(--radius-md)] transition-colors',
             autoScroll
-              ? 'bg-[var(--accent-soft)] border-[var(--accent)]/20 text-[var(--accent)]'
-              : 'bg-transparent border-[var(--border-default)] text-[var(--text-tertiary)]'
+              ? 'bg-[var(--accent-soft)] text-[var(--accent)]'
+              : 'text-[var(--text-tertiary)] hover:bg-[var(--bg-surface-2)] hover:text-[var(--text-primary)]'
           )}
         >
           <ArrowDown size={12} /> Auto-scroll
@@ -221,21 +221,23 @@ export default function Logs() {
       <div className="relative flex-1 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-muted)] overflow-hidden">
         <div
           ref={containerRef}
-          className="h-full overflow-y-auto font-[var(--font-mono)] text-xs leading-6"
+          className="h-full overflow-y-auto font-[var(--font-mono)] text-[13px] leading-6"
         >
           {isLoading && (
-            <div className="flex items-center justify-center h-full text-[var(--text-tertiary)]">
+            <div className="flex items-center justify-center h-full text-[var(--text-tertiary)] text-sm">
               Loading logs...
             </div>
           )}
 
           {!isLoading && isError && (
-            <div className="flex flex-col items-center justify-center h-full gap-3 text-[var(--text-tertiary)]">
-              <AlertTriangle size={24} className="text-[var(--danger)]" />
-              <span className="text-sm text-[var(--danger)]">Failed to load logs</span>
-              <span className="text-xs max-w-md text-center">
-                {error instanceof Error ? error.message : 'Could not connect to the Hermes Agent API. Check that the agent is running.'}
-              </span>
+            <div className="flex items-center gap-3 m-4 p-4 rounded-[var(--radius-md)] bg-[var(--danger-soft)] border border-[var(--danger)]/20">
+              <AlertCircle size={16} className="text-[var(--danger)] shrink-0" />
+              <div>
+                <span className="text-sm font-medium text-[var(--danger)]">Failed to load logs</span>
+                <p className="text-xs text-[var(--text-tertiary)] mt-1">
+                  {error instanceof Error ? error.message : 'Could not connect to the Hermes Agent API. Check that the agent is running.'}
+                </p>
+              </div>
             </div>
           )}
 
@@ -248,12 +250,12 @@ export default function Logs() {
               )}
             >
               {/* Line number */}
-              <span className="shrink-0 w-[40px] text-right pr-3 select-none text-[var(--text-tertiary)]" style={{ fontVariantNumeric: 'tabular-nums' }}>
+              <span className="shrink-0 w-[40px] text-right pr-3 select-none text-[var(--text-tertiary)] tabular-nums">
                 {log.id + 1}
               </span>
               {/* Formatted: [HH:MM:SS] [LEVEL] [module] message */}
               {log.time && (
-                <span className="shrink-0 text-[var(--text-tertiary)] mr-2" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                <span className="shrink-0 text-[var(--text-tertiary)] mr-2 tabular-nums">
                   [{log.time}]
                 </span>
               )}
@@ -280,7 +282,7 @@ export default function Logs() {
           ))}
 
           {!isLoading && !isError && filtered.length === 0 && (
-            <div className="flex items-center justify-center h-full text-[var(--text-tertiary)]">
+            <div className="flex items-center justify-center h-full text-[var(--text-tertiary)] text-sm">
               No logs match the current filter
             </div>
           )}
@@ -295,8 +297,6 @@ export default function Logs() {
         </span>
         <span>
           Total: {totalLines} lines
-          {' | '}
-          File: {logFile}
         </span>
       </div>
     </div>
