@@ -52,6 +52,14 @@ export function useSession(id: string) {
   })
 }
 
+export function useSessionMessages(id: string) {
+  return useQuery({
+    queryKey: ['session-messages', id],
+    queryFn: () => api.getSessionMessages(id),
+    enabled: !!id,
+  })
+}
+
 // Skills
 export function useSkills() {
   return useQuery({ queryKey: ['skills'], queryFn: api.getSkills })

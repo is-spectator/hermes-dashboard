@@ -106,7 +106,11 @@ export const api = {
     const query = qs.toString()
     return request<SessionsResponse>(`/api/sessions${query ? `?${query}` : ''}`)
   },
-  getSession: (id: string) => request<Session>(`/api/session/${id}`),
+  getSession: (id: string) => request<Session>(`/api/sessions/${id}`),
+  getSessionMessages: (id: string) =>
+    request<{ session_id: string; messages: { role: string; content: string }[] }>(
+      `/api/sessions/${id}/messages`
+    ),
 
   // Skills — returns Skill[]
   getSkills: () => request<Skill[]>('/api/skills'),

@@ -6,8 +6,100 @@ import SearchInput from '../components/SearchInput'
 import SideDrawer from '../components/SideDrawer'
 import Badge from '../components/Badge'
 import { formatRelativeTime } from '../lib/utils'
-import { useSessions } from '../api/hooks'
+import { useSessions, useSessionMessages } from '../api/hooks'
 import type { Session } from '../api/types'
+
+const roleBadge: Record<string, 'info' | 'success' | 'warning' | 'neutral'> = {
+  user: 'info',
+  assistant: 'success',
+  system: 'neutral',
+  tool: 'warning',
+}
+
+function SessionDetail({ session }: { session: Session }) {
+  const { data: msgData, isLoading: msgsLoading } = useSessionMessages(session.id)
+  const messages = msgData?.messages ?? []
+
+  return (
+    <div className="space-y-5">
+      {/* Meta grid */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: 'Source', value: session.source },
+          { label: 'Model', value: session.model, badge: true },
+          { label: 'Status', value: session.is_active ? 'Active' : session.end_reason || 'Ended', badgeVariant: session.is_active ? 'success' as const : 'neutral' as const },
+          { label: 'Messages', value: String(session.message_count), mono: true },
+          { label: 'Tools', value: String(session.tool_call_count), mono: true },
+          { label: 'Cost', value: `$${(session.estimated_cost_usd ?? 0).toFixed(4)}`, mono: true },
+          { label: 'Input', value: session.input_tokens.toLocaleString(), mono: true },
+          { label: 'Output', value: session.output_tokens.toLocaleString(), mono: true },
+          { label: 'Cached', value: session.cache_read_tokens.toLocaleString(), mono: true },
+        ].map((item) => (
+          <div key={item.label} className="text-xs text-[var(--text-muted)]">
+            {item.label}
+            <div className="mt-1">
+              {item.badge ? (
+                <Badge variant="info" style="outline">{item.value}</Badge>
+              ) : item.badgeVariant ? (
+                <Badge variant={item.badgeVariant}>{item.value}</Badge>
+              ) : (
+                <span className={`text-sm text-[var(--text-primary)] ${item.mono ? 'font-[var(--font-mono)]' : ''}`}>
+                  {item.value}
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {session.started_at && (
+        <div className="text-xs text-[var(--text-muted)]" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '12px' }}>
+          Started: {new Date(session.started_at * 1000).toLocaleString()}
+          {session.ended_at && <span className="ml-4">Ended: {new Date(session.ended_at * 1000).toLocaleString()}</span>}
+        </div>
+      )}
+
+      {/* Conversation */}
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '16px' }}>
+        <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)] mb-4">
+          Conversation ({messages.length})
+        </h3>
+
+        {msgsLoading && (
+          <div className="text-sm text-[var(--text-muted)] text-center py-8">Loading messages...</div>
+        )}
+
+        <div className="space-y-4">
+          {messages.map((msg, i) => (
+            <div
+              key={i}
+              className="animate-[fade-in-up_150ms_ease-out]"
+              style={{ animationDelay: `${Math.min(i * 30, 300)}ms`, animationFillMode: 'both' }}
+            >
+              <div className="flex items-center gap-2 mb-1.5">
+                <Badge variant={roleBadge[msg.role] || 'neutral'} style="outline">
+                  {msg.role}
+                </Badge>
+              </div>
+              <div
+                className="text-sm text-[var(--text-primary)] pl-3 whitespace-pre-wrap break-words leading-relaxed"
+                style={{
+                  borderLeft: `2px solid ${msg.role === 'user' ? 'rgba(56,189,248,0.3)' : msg.role === 'assistant' ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                }}
+              >
+                {msg.content.length > 800 ? msg.content.slice(0, 800) + '...' : msg.content}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {!msgsLoading && messages.length === 0 && (
+          <div className="text-sm text-[var(--text-muted)] text-center py-4">No messages in this session</div>
+        )}
+      </div>
+    </div>
+  )
+}
 
 const sourceIcons: Record<string, React.ReactNode> = {
   cli: <Terminal size={14} />,
@@ -162,81 +254,10 @@ export default function Sessions() {
         open={!!selectedSession}
         onClose={() => setSelectedSession(null)}
         title={selectedSession?.title || selectedSession?.preview || `Session ${selectedSession?.id ?? ''}`}
+        width="600px"
       >
         {selectedSession && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="text-xs text-[var(--text-muted)]">
-                Source
-                <div className="mt-1 text-sm text-[var(--text-primary)]">{selectedSession.source}</div>
-              </div>
-              <div className="text-xs text-[var(--text-muted)]">
-                Model
-                <div className="mt-1"><Badge variant="info" style="outline">{selectedSession.model}</Badge></div>
-              </div>
-              <div className="text-xs text-[var(--text-muted)]">
-                Messages
-                <div className="mt-1 text-sm text-[var(--text-primary)] font-[var(--font-mono)]" style={{ textShadow: 'var(--text-glow-accent)' }}>{selectedSession.message_count}</div>
-              </div>
-              <div className="text-xs text-[var(--text-muted)]">
-                Tool Calls
-                <div className="mt-1 text-sm text-[var(--text-primary)] font-[var(--font-mono)]" style={{ textShadow: 'var(--text-glow-accent)' }}>{selectedSession.tool_call_count}</div>
-              </div>
-              <div className="text-xs text-[var(--text-muted)]">
-                Input Tokens
-                <div className="mt-1 text-sm text-[var(--text-primary)] font-[var(--font-mono)]" style={{ textShadow: 'var(--text-glow-accent)' }}>{selectedSession.input_tokens.toLocaleString()}</div>
-              </div>
-              <div className="text-xs text-[var(--text-muted)]">
-                Output Tokens
-                <div className="mt-1 text-sm text-[var(--text-primary)] font-[var(--font-mono)]" style={{ textShadow: 'var(--text-glow-accent)' }}>{selectedSession.output_tokens.toLocaleString()}</div>
-              </div>
-              <div className="text-xs text-[var(--text-muted)]">
-                Cache Read
-                <div className="mt-1 text-sm text-[var(--text-primary)] font-[var(--font-mono)]" style={{ textShadow: 'var(--text-glow-accent)' }}>{selectedSession.cache_read_tokens.toLocaleString()}</div>
-              </div>
-              <div className="text-xs text-[var(--text-muted)]">
-                Estimated Cost
-                <div className="mt-1 text-sm text-[var(--text-primary)] font-[var(--font-mono)]" style={{ textShadow: 'var(--text-glow-accent)' }}>${(selectedSession.estimated_cost_usd ?? 0).toFixed(4)}</div>
-              </div>
-              <div className="text-xs text-[var(--text-muted)]">
-                Billing Provider
-                <div className="mt-1 text-sm text-[var(--text-primary)]">{selectedSession.billing_provider}</div>
-              </div>
-              <div className="text-xs text-[var(--text-muted)]">
-                Status
-                <div className="mt-1">
-                  <Badge variant={selectedSession.is_active ? 'success' : 'neutral'}>
-                    {selectedSession.is_active ? 'Active' : selectedSession.end_reason || 'Ended'}
-                  </Badge>
-                </div>
-              </div>
-            </div>
-
-            {selectedSession.started_at && (
-              <div className="border-t border-[rgba(255,255,255,0.06)] pt-4">
-                <div className="text-xs text-[var(--text-muted)]">
-                  Started: {new Date(selectedSession.started_at * 1000).toLocaleString()}
-                </div>
-                {selectedSession.ended_at && (
-                  <div className="text-xs text-[var(--text-muted)] mt-1">
-                    Ended: {new Date(selectedSession.ended_at * 1000).toLocaleString()}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {selectedSession.preview && (
-              <div className="border-t border-[rgba(255,255,255,0.06)] pt-4">
-                <h3 className="text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--text-muted)] mb-2">Preview</h3>
-                <p
-                  className="text-sm text-[var(--text-primary)] pl-3"
-                  style={{ borderLeft: '2px solid rgba(56,189,248,0.3)' }}
-                >
-                  {selectedSession.preview}
-                </p>
-              </div>
-            )}
-          </div>
+          <SessionDetail session={selectedSession} />
         )}
       </SideDrawer>
     </div>
