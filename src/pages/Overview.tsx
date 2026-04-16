@@ -78,7 +78,7 @@ export default function Overview() {
           title="Total Messages"
           value={totalMessages}
           icon={<MessageSquare size={16} />}
-          subtitle="across all sessions"
+          subtitle="from recent sessions"
           loading={sessionsLoading}
         />
         <MetricCard

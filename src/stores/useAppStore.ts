@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { getDisplayApiUrl, setHermesApiUrl as persistApiUrl } from '../lib/config'
 
 type Theme = 'dark' | 'light'
 
@@ -22,7 +23,7 @@ const getInitialTheme = (): Theme => {
 export const useAppStore = create<AppState>((set) => ({
   theme: getInitialTheme(),
   sidebarExpanded: false,
-  hermesApiUrl: localStorage.getItem('hermes-api-url') || 'http://127.0.0.1:9119',
+  hermesApiUrl: getDisplayApiUrl(),
 
   toggleTheme: () =>
     set((state) => {
@@ -43,7 +44,7 @@ export const useAppStore = create<AppState>((set) => ({
   setSidebarExpanded: (expanded) => set({ sidebarExpanded: expanded }),
 
   setHermesApiUrl: (url) => {
-    localStorage.setItem('hermes-api-url', url)
+    persistApiUrl(url)
     set({ hermesApiUrl: url })
   },
 }))

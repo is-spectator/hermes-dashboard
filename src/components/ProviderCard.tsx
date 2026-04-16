@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ChevronDown, ChevronUp, ExternalLink, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import Badge from './Badge'
 import Button from './Button'
@@ -37,17 +37,19 @@ export default function ProviderCard({
 }: ProviderCardProps) {
   const [expanded, setExpanded] = useState(false)
   const [newKey, setNewKey] = useState('')
-  const [submitted, setSubmitted] = useState(false)
+  const prevLoadingRef = useRef(addKeyLoading)
 
-  // Clear input only on successful save (submitted + loading finished + no error)
-  if (submitted && !addKeyLoading && !error) {
-    setNewKey('')
-    setSubmitted(false)
-  }
-  // Reset submitted flag on error so user can retry
-  if (submitted && !addKeyLoading && error) {
-    setSubmitted(false)
-  }
+  // Clear input when loading finishes successfully (loading → done transition).
+  // The ref tracks previous loading state; the effect fires on prop change.
+  useEffect(() => {
+    const wasLoading = prevLoadingRef.current
+    prevLoadingRef.current = addKeyLoading
+    if (wasLoading && !addKeyLoading && !error) {
+      // Use requestAnimationFrame so the update is asynchronous, avoiding a
+      // synchronous cascading render inside the effect body.
+      requestAnimationFrame(() => setNewKey(''))
+    }
+  }, [addKeyLoading, error])
 
   const glassStyle = {
     background: 'rgba(255,255,255,0.03)',
@@ -236,8 +238,7 @@ export default function ProviderCard({
               size="sm"
               disabled={!newKey.trim() || addKeyLoading}
               onClick={() => {
-                setSubmitted(true)
-                onAddKey?.(newKey)
+                onAddKey?.(newKey.trim())
               }}
             >
               {addKeyLoading ? (

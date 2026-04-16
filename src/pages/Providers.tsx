@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
+import { AlertCircle } from 'lucide-react'
 import SearchInput from '../components/SearchInput'
 import ProviderCard from '../components/ProviderCard'
 import { useEnv, useUpdateEnv, useDeleteEnvKey } from '../api/hooks'
@@ -13,7 +14,7 @@ export default function Providers() {
   const [removeKeyLoadingFor, setRemoveKeyLoadingFor] = useState<string | null>(null)
   const [errorFor, setErrorFor] = useState<Record<string, string>>({})
 
-  const { data: envData, isLoading } = useEnv()
+  const { data: envData, isLoading, error } = useEnv()
   const updateEnv = useUpdateEnv()
   const deleteEnvKey = useDeleteEnvKey()
   const addToast = useToastStore((s) => s.addToast)
@@ -119,6 +120,27 @@ export default function Providers() {
     return (
       <div className="flex items-center justify-center py-20 text-sm text-[var(--text-muted)]">
         Loading providers...
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="rounded-[var(--radius-lg)] p-8 text-center"
+          style={{
+            background: 'rgba(248,113,113,0.04)',
+            border: '1px solid rgba(248,113,113,0.15)',
+          }}
+        >
+          <AlertCircle size={36} className="mx-auto text-[#f87171] mb-4 opacity-80" />
+          <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">
+            Failed to load providers
+          </h2>
+          <p className="text-xs text-[var(--text-secondary)] max-w-sm mx-auto">
+            {error instanceof Error ? error.message : 'Could not fetch environment variables. Check that Hermes Agent is running.'}
+          </p>
+        </div>
       </div>
     )
   }

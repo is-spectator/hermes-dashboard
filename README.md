@@ -76,7 +76,7 @@ npm run preview # serve the built files locally
 |-------|--------|
 | Framework | React 19 + TypeScript |
 | Styling | Tailwind CSS v4 + CSS Custom Properties |
-| Build | Vite 6 |
+| Build | Vite 8 |
 | State | Zustand |
 | Data Fetching | TanStack Query |
 | Router | React Router v7 |

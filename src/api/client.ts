@@ -7,18 +7,7 @@ import type {
   SessionsResponse,
   Skill,
 } from './types'
-
-/**
- * Get the base URL prefix for API requests.
- * In dev mode with Vite proxy, this is '' (empty) — the proxy handles routing.
- * In production or when user configures a custom URL, returns the full URL.
- */
-function getBaseUrl(): string {
-  const stored = localStorage.getItem('hermes-api-url')
-  // If user hasn't customized, use env var or empty (for Vite proxy)
-  if (!stored) return import.meta.env.VITE_HERMES_API_URL || ''
-  return stored
-}
+import { getRequestBaseUrl } from '../lib/config'
 
 // ---------------------------------------------------------------------------
 // Token management
@@ -35,7 +24,7 @@ function extractToken(html: string): string | null {
 async function fetchToken(): Promise<string | null> {
   try {
     // 1. Try the Vite dev-proxy path first (works in dev, 404 in production)
-    const proxyRes = await fetch(`${getBaseUrl()}/__hermes_root__`, {
+    const proxyRes = await fetch(`${getRequestBaseUrl()}/__hermes_root__`, {
       headers: { Accept: 'text/html' },
       signal: AbortSignal.timeout(5000),
     })
@@ -52,7 +41,7 @@ async function fetchToken(): Promise<string | null> {
 
   try {
     // 2. Fall back to fetching the Hermes root page directly
-    const directRes = await fetch(`${getBaseUrl()}/`, {
+    const directRes = await fetch(`${getRequestBaseUrl()}/`, {
       headers: { Accept: 'text/html' },
       signal: AbortSignal.timeout(5000),
     })
@@ -106,7 +95,7 @@ async function request<T>(
     headers['Authorization'] = `Bearer ${token}`
   }
 
-  const baseUrl = getBaseUrl()
+  const baseUrl = getRequestBaseUrl()
 
   let res: Response
   try {

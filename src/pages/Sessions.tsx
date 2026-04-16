@@ -212,7 +212,7 @@ export default function Sessions() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard title="Total Sessions" value={totalSessionCount} />
         <MetricCard title="Active" value={allSessions.filter((s) => s.is_active).length} subtitle="sessions" />
-        <MetricCard title="Tool Calls" value={totalToolCalls} icon={<Wrench size={16} />} subtitle="across all sessions" />
+        <MetricCard title="Tool Calls" value={totalToolCalls} icon={<Wrench size={16} />} subtitle="from loaded sessions" />
         <MetricCard title="Total Cost" value={`$${totalCost.toFixed(2)}`} icon={<DollarSign size={16} />} animate={false} />
       </div>
 
