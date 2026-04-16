@@ -1,73 +1,59 @@
 import { useState, useMemo } from 'react'
-import { MessageSquare, Terminal, Hash, Wrench } from 'lucide-react'
+import { MessageSquare, Terminal, Hash, Wrench, DollarSign } from 'lucide-react'
 import MetricCard from '../components/MetricCard'
 import DataTable, { type Column } from '../components/DataTable'
 import SearchInput from '../components/SearchInput'
 import SideDrawer from '../components/SideDrawer'
 import Badge from '../components/Badge'
 import { formatRelativeTime } from '../lib/utils'
-
-interface SessionRow {
-  id: string
-  title: string
-  source: string
-  model: string
-  messages: number
-  tool_calls: number
-  updated_at: string
-}
+import { useSessions } from '../api/hooks'
+import type { Session } from '../api/types'
 
 const sourceIcons: Record<string, React.ReactNode> = {
-  CLI: <Terminal size={14} />,
-  Telegram: <MessageSquare size={14} />,
-  Discord: <Hash size={14} />,
-  Slack: <MessageSquare size={14} />,
-  Cron: <Wrench size={14} />,
+  cli: <Terminal size={14} />,
+  telegram: <MessageSquare size={14} />,
+  discord: <Hash size={14} />,
+  slack: <MessageSquare size={14} />,
+  cron: <Wrench size={14} />,
 }
-
-// Mock data
-const mockSessions: SessionRow[] = [
-  { id: '1', title: 'Help me debug the auth middleware', source: 'Telegram', model: 'claude-3.5-sonnet', messages: 24, tool_calls: 8, updated_at: '2026-04-16T09:30:00Z' },
-  { id: '2', title: 'Write unit tests for payment module', source: 'CLI', model: 'gpt-4o', messages: 18, tool_calls: 12, updated_at: '2026-04-16T09:15:00Z' },
-  { id: '3', title: 'Summarize the quarterly report', source: 'Discord', model: 'claude-3.5-sonnet', messages: 6, tool_calls: 2, updated_at: '2026-04-16T08:45:00Z' },
-  { id: '4', title: 'Deploy staging environment', source: 'Slack', model: 'deepseek-v3', messages: 14, tool_calls: 22, updated_at: '2026-04-16T08:00:00Z' },
-  { id: '5', title: 'Daily digest generation', source: 'Cron', model: 'gpt-4o-mini', messages: 4, tool_calls: 3, updated_at: '2026-04-16T07:00:00Z' },
-  { id: '6', title: 'Refactor database schema', source: 'CLI', model: 'claude-3.5-sonnet', messages: 32, tool_calls: 15, updated_at: '2026-04-15T22:00:00Z' },
-  { id: '7', title: 'Translate docs to Chinese', source: 'Telegram', model: 'gpt-4o', messages: 10, tool_calls: 1, updated_at: '2026-04-15T18:30:00Z' },
-  { id: '8', title: 'Code review PR #142', source: 'Discord', model: 'deepseek-v3', messages: 8, tool_calls: 5, updated_at: '2026-04-15T16:00:00Z' },
-]
-
-const mockConversation = [
-  { role: 'user' as const, content: 'Can you help me debug the auth middleware? It returns 401 for valid tokens.', timestamp: '2026-04-16T09:00:00Z' },
-  { role: 'assistant' as const, content: "I'll look into this. Let me check the middleware code first.", timestamp: '2026-04-16T09:00:15Z' },
-  { role: 'tool' as const, content: 'Read file: src/middleware/auth.ts', timestamp: '2026-04-16T09:00:20Z', tool_name: 'read_file' },
-  { role: 'assistant' as const, content: "I found the issue. The token verification is using the wrong secret. The middleware reads `JWT_SECRET` but your env has `AUTH_SECRET`.", timestamp: '2026-04-16T09:01:00Z' },
-]
-
-const platforms = ['All', 'CLI', 'Telegram', 'Discord', 'Slack', 'Cron']
 
 export default function Sessions() {
   const [search, setSearch] = useState('')
   const [sourceFilter, setSourceFilter] = useState('All')
-  const [selectedSession, setSelectedSession] = useState<SessionRow | null>(null)
+  const [selectedSession, setSelectedSession] = useState<Session | null>(null)
+
+  const { data: sessionsData, isLoading } = useSessions()
+  const sessions = sessionsData?.sessions ?? []
+
+  // Derive unique sources for filter
+  const sources = useMemo(() => {
+    const uniqueSources = new Set(sessions.map((s) => s.source))
+    return ['All', ...Array.from(uniqueSources).sort()]
+  }, [sessions])
 
   const filtered = useMemo(() => {
-    return mockSessions.filter((s) => {
-      if (search && !s.title.toLowerCase().includes(search.toLowerCase())) return false
+    return sessions.filter((s) => {
+      const title = s.title || s.preview || s.id
+      if (search && !title.toLowerCase().includes(search.toLowerCase()) && !s.model.toLowerCase().includes(search.toLowerCase())) return false
       if (sourceFilter !== 'All' && s.source !== sourceFilter) return false
       return true
     })
-  }, [search, sourceFilter])
+  }, [sessions, search, sourceFilter])
 
-  const totalMessages = mockSessions.reduce((a, s) => a + s.messages, 0)
-  const totalTools = mockSessions.reduce((a, s) => a + s.tool_calls, 0)
-  const avgMessages = Math.round(totalMessages / mockSessions.length)
+  const totalMessages = sessions.reduce((a, s) => a + s.message_count, 0)
+  const avgMessages = sessions.length ? Math.round(totalMessages / sessions.length) : 0
+  const totalCost = sessions.reduce((a, s) => a + s.estimated_cost_usd, 0)
 
-  const columns: Column<SessionRow>[] = [
+  const columns: Column<Session>[] = [
     {
       key: 'title',
       header: 'Title',
-      render: (row) => <span className="font-medium truncate max-w-[300px] block">{row.title}</span>,
+      render: (row) => (
+        <div className="max-w-[300px]">
+          <span className="font-medium truncate block">{row.title || row.preview || `Session ${row.id}`}</span>
+          {row.is_active && <Badge variant="success">Active</Badge>}
+        </div>
+      ),
     },
     {
       key: 'source',
@@ -90,19 +76,33 @@ export default function Sessions() {
       key: 'messages',
       header: 'Messages',
       width: '90px',
-      render: (row) => <span className="font-[var(--font-mono)] text-xs">{row.messages}</span>,
+      render: (row) => <span className="font-[var(--font-mono)] text-xs">{row.message_count}</span>,
     },
     {
       key: 'tools',
       header: 'Tools',
       width: '80px',
-      render: (row) => <span className="font-[var(--font-mono)] text-xs">{row.tool_calls}</span>,
+      render: (row) => <span className="font-[var(--font-mono)] text-xs">{row.tool_call_count}</span>,
+    },
+    {
+      key: 'cost',
+      header: 'Cost',
+      width: '80px',
+      render: (row) => (
+        <span className="font-[var(--font-mono)] text-xs">
+          ${row.estimated_cost_usd.toFixed(4)}
+        </span>
+      ),
     },
     {
       key: 'time',
       header: 'Time',
       width: '100px',
-      render: (row) => <span className="text-xs text-[var(--text-muted)]">{formatRelativeTime(row.updated_at)}</span>,
+      render: (row) => (
+        <span className="text-xs text-[var(--text-muted)]">
+          {formatRelativeTime(new Date(row.last_active * 1000).toISOString())}
+        </span>
+      ),
     },
   ]
 
@@ -110,17 +110,17 @@ export default function Sessions() {
     <div className="space-y-6">
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard title="Total Sessions" value={mockSessions.length} />
-        <MetricCard title="Today" value={5} subtitle="sessions" />
+        <MetricCard title="Total Sessions" value={sessions.length} />
+        <MetricCard title="Active" value={sessions.filter((s) => s.is_active).length} subtitle="sessions" />
         <MetricCard title="Avg Messages" value={avgMessages} subtitle="per session" />
-        <MetricCard title="Tool Calls" value={totalTools} />
+        <MetricCard title="Total Cost" value={`$${totalCost.toFixed(2)}`} icon={<DollarSign size={16} />} animate={false} />
       </div>
 
       {/* Toolbar */}
       <div className="flex items-center gap-3 flex-wrap">
         <SearchInput value={search} onChange={setSearch} placeholder="Search sessions..." className="w-64" />
         <div className="flex rounded-[var(--radius-md)] border border-[var(--border-default)] overflow-hidden">
-          {platforms.map((p) => (
+          {sources.map((p) => (
             <button
               key={p}
               onClick={() => setSourceFilter(p)}
@@ -137,19 +137,23 @@ export default function Sessions() {
       </div>
 
       {/* Table */}
-      <DataTable
-        columns={columns}
-        data={filtered}
-        rowKey={(row) => row.id}
-        onRowClick={(row) => setSelectedSession(row)}
-        emptyMessage="No sessions found"
-      />
+      {isLoading ? (
+        <div className="text-center py-12 text-sm text-[var(--text-muted)]">Loading sessions...</div>
+      ) : (
+        <DataTable
+          columns={columns}
+          data={filtered}
+          rowKey={(row) => row.id}
+          onRowClick={(row) => setSelectedSession(row)}
+          emptyMessage="No sessions found"
+        />
+      )}
 
       {/* Session Detail Drawer */}
       <SideDrawer
         open={!!selectedSession}
         onClose={() => setSelectedSession(null)}
-        title={selectedSession?.title}
+        title={selectedSession?.title || selectedSession?.preview || `Session ${selectedSession?.id ?? ''}`}
       >
         {selectedSession && (
           <div className="space-y-4">
@@ -164,33 +168,63 @@ export default function Sessions() {
               </div>
               <div className="text-xs text-[var(--text-muted)]">
                 Messages
-                <div className="mt-1 text-sm text-[var(--text-primary)] font-[var(--font-mono)]">{selectedSession.messages}</div>
+                <div className="mt-1 text-sm text-[var(--text-primary)] font-[var(--font-mono)]">{selectedSession.message_count}</div>
               </div>
               <div className="text-xs text-[var(--text-muted)]">
                 Tool Calls
-                <div className="mt-1 text-sm text-[var(--text-primary)] font-[var(--font-mono)]">{selectedSession.tool_calls}</div>
+                <div className="mt-1 text-sm text-[var(--text-primary)] font-[var(--font-mono)]">{selectedSession.tool_call_count}</div>
+              </div>
+              <div className="text-xs text-[var(--text-muted)]">
+                Input Tokens
+                <div className="mt-1 text-sm text-[var(--text-primary)] font-[var(--font-mono)]">{selectedSession.input_tokens.toLocaleString()}</div>
+              </div>
+              <div className="text-xs text-[var(--text-muted)]">
+                Output Tokens
+                <div className="mt-1 text-sm text-[var(--text-primary)] font-[var(--font-mono)]">{selectedSession.output_tokens.toLocaleString()}</div>
+              </div>
+              <div className="text-xs text-[var(--text-muted)]">
+                Cache Read
+                <div className="mt-1 text-sm text-[var(--text-primary)] font-[var(--font-mono)]">{selectedSession.cache_read_tokens.toLocaleString()}</div>
+              </div>
+              <div className="text-xs text-[var(--text-muted)]">
+                Estimated Cost
+                <div className="mt-1 text-sm text-[var(--text-primary)] font-[var(--font-mono)]">${selectedSession.estimated_cost_usd.toFixed(4)}</div>
+              </div>
+              <div className="text-xs text-[var(--text-muted)]">
+                Billing Provider
+                <div className="mt-1 text-sm text-[var(--text-primary)]">{selectedSession.billing_provider}</div>
+              </div>
+              <div className="text-xs text-[var(--text-muted)]">
+                Status
+                <div className="mt-1">
+                  <Badge variant={selectedSession.is_active ? 'success' : 'neutral'}>
+                    {selectedSession.is_active ? 'Active' : selectedSession.end_reason || 'Ended'}
+                  </Badge>
+                </div>
               </div>
             </div>
 
-            <div className="border-t border-[var(--border-subtle)] pt-4">
-              <h3 className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)] mb-3">Conversation</h3>
-              <div className="space-y-3">
-                {mockConversation.map((msg, i) => (
-                  <div key={i} className="animate-[fade-in-up_150ms_ease-out]">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge variant={msg.role === 'user' ? 'info' : msg.role === 'tool' ? 'warning' : 'neutral'} style="outline">
-                        {msg.role}
-                      </Badge>
-                      {msg.tool_name && <span className="text-[10px] font-[var(--font-mono)] text-[var(--text-muted)]">{msg.tool_name}</span>}
-                      <span className="text-[10px] text-[var(--text-muted)]">{new Date(msg.timestamp).toLocaleTimeString()}</span>
-                    </div>
-                    <p className="text-sm text-[var(--text-primary)] pl-2 border-l-2 border-[var(--border-subtle)]">
-                      {msg.content}
-                    </p>
+            {selectedSession.started_at && (
+              <div className="border-t border-[var(--border-subtle)] pt-4">
+                <div className="text-xs text-[var(--text-muted)]">
+                  Started: {new Date(selectedSession.started_at * 1000).toLocaleString()}
+                </div>
+                {selectedSession.ended_at && (
+                  <div className="text-xs text-[var(--text-muted)] mt-1">
+                    Ended: {new Date(selectedSession.ended_at * 1000).toLocaleString()}
                   </div>
-                ))}
+                )}
               </div>
-            </div>
+            )}
+
+            {selectedSession.preview && (
+              <div className="border-t border-[var(--border-subtle)] pt-4">
+                <h3 className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)] mb-2">Preview</h3>
+                <p className="text-sm text-[var(--text-primary)] pl-2 border-l-2 border-[var(--border-subtle)]">
+                  {selectedSession.preview}
+                </p>
+              </div>
+            )}
           </div>
         )}
       </SideDrawer>

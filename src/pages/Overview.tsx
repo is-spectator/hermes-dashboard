@@ -1,60 +1,56 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Activity, Radio, Zap, MessageSquare, Clock } from 'lucide-react'
+import { Activity, Radio, Zap, MessageSquare, Clock, AlertCircle } from 'lucide-react'
 import MetricCard from '../components/MetricCard'
 import StatusDot from '../components/StatusDot'
 import Badge from '../components/Badge'
-import { formatRelativeTime } from '../lib/utils'
-
-// Mock data — will be replaced with real API calls
-const mockStatus = {
-  agent: 'online' as const,
-  uptime: '3d 14h 22m',
-  version: '0.9.2',
-}
-
-const mockMetrics = {
-  messages: 1247,
-  activeGateways: 4,
-  totalGateways: 6,
-  skills: 23,
-  newSkillsToday: 2,
-}
-
-const mockGateways = [
-  { name: 'Telegram', connected: true, lastActive: '2026-04-16T09:30:00Z' },
-  { name: 'Discord', connected: true, lastActive: '2026-04-16T09:28:00Z' },
-  { name: 'Slack', connected: true, lastActive: '2026-04-16T08:45:00Z' },
-  { name: 'CLI', connected: true, lastActive: '2026-04-16T09:31:00Z' },
-  { name: 'WhatsApp', connected: false, lastActive: '2026-04-15T18:00:00Z' },
-  { name: 'Matrix', connected: false, lastActive: null },
-]
-
-const mockActivity = [
-  { id: 1, type: 'message', text: 'New session started via Telegram', time: '2026-04-16T09:31:00Z' },
-  { id: 2, type: 'skill', text: 'Skill "web-search" executed successfully', time: '2026-04-16T09:28:00Z' },
-  { id: 3, type: 'gateway', text: 'Discord gateway reconnected', time: '2026-04-16T09:15:00Z' },
-  { id: 4, type: 'cron', text: 'Cron job "daily-digest" completed', time: '2026-04-16T09:00:00Z' },
-  { id: 5, type: 'message', text: 'Session #482 ended (12 messages)', time: '2026-04-16T08:45:00Z' },
-  { id: 6, type: 'skill', text: 'Skill "code-interpreter" executed', time: '2026-04-16T08:30:00Z' },
-  { id: 7, type: 'message', text: 'New session started via CLI', time: '2026-04-16T08:20:00Z' },
-  { id: 8, type: 'gateway', text: 'Slack gateway connected', time: '2026-04-16T08:00:00Z' },
-]
-
-const activityIcons: Record<string, React.ReactNode> = {
-  message: <MessageSquare size={14} />,
-  skill: <Zap size={14} />,
-  gateway: <Radio size={14} />,
-  cron: <Clock size={14} />,
-}
+import { useStatus, useSkills, useSessions, useEnv } from '../api/hooks'
 
 export default function Overview() {
   const navigate = useNavigate()
   const [loaded, setLoaded] = useState(false)
 
+  const { data: status, isLoading: statusLoading, error: statusError } = useStatus()
+  const { data: skills } = useSkills()
+  const { data: sessionsData } = useSessions()
+  const { data: envData } = useEnv()
+
+  const sessions = sessionsData?.sessions ?? []
+
   useEffect(() => {
     setLoaded(true)
   }, [])
+
+  // Derive gateway platforms from status
+  const gatewayPlatforms = status?.gateway_platforms
+    ? Object.entries(status.gateway_platforms).map(([name, info]) => ({
+        name,
+        connected: info.connected ?? false,
+        lastActive: info.last_active ?? null,
+      }))
+    : []
+
+  // Derive provider health from env data
+  const providerEntries = envData
+    ? Object.entries(envData)
+        .filter(([, v]) => v.category === 'provider')
+        .map(([key, v]) => ({
+          name: key.replace(/_API_KEY$/, '').replace(/_/g, ' '),
+          envKey: key,
+          configured: v.is_set,
+        }))
+    : []
+
+  const totalMessages = sessions.reduce((a, s) => a + s.message_count, 0)
+  const activeSessions = sessions.filter((s) => s.is_active).length
+  const enabledSkills = skills?.filter((s) => s.enabled).length ?? 0
+
+  // Recent sessions as activity
+  const recentSessions = [...sessions]
+    .sort((a, b) => b.last_active - a.last_active)
+    .slice(0, 8)
+
+  const agentOnline = !statusError && !!status
 
   return (
     <div className="space-y-6">
@@ -62,75 +58,99 @@ export default function Overview() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           title="Agent Status"
-          value={mockStatus.agent === 'online' ? 'Online' : 'Offline'}
-          icon={<StatusDot status={mockStatus.agent} size="md" />}
-          subtitle={`Uptime: ${mockStatus.uptime}`}
+          value={statusLoading ? '...' : agentOnline ? 'Online' : 'Offline'}
+          icon={<StatusDot status={agentOnline ? 'online' : 'offline'} size="md" />}
+          subtitle={status ? `v${status.version}` : undefined}
           animate={false}
         />
         <MetricCard
-          title="Messages Today"
-          value={loaded ? mockMetrics.messages : 0}
+          title="Total Messages"
+          value={loaded ? totalMessages : 0}
           icon={<MessageSquare size={16} />}
+          subtitle={`${activeSessions} active session${activeSessions !== 1 ? 's' : ''}`}
         />
         <MetricCard
-          title="Active Gateways"
-          value={`${mockMetrics.activeGateways} / ${mockMetrics.totalGateways}`}
+          title="Gateway"
+          value={status?.gateway_running ? 'Running' : 'Stopped'}
           icon={<Radio size={16} />}
+          subtitle={`${gatewayPlatforms.length} platform${gatewayPlatforms.length !== 1 ? 's' : ''}`}
           animate={false}
         />
         <MetricCard
           title="Skills"
-          value={loaded ? mockMetrics.skills : 0}
+          value={loaded ? enabledSkills : 0}
           icon={<Zap size={16} />}
-          subtitle={`+${mockMetrics.newSkillsToday} today`}
+          subtitle={`${skills?.length ?? 0} total`}
         />
       </div>
 
       {/* Gateway Status Grid */}
-      <section>
-        <h2 className="text-sm font-medium text-[var(--text-secondary)] mb-3">Gateway Status</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {mockGateways
-            .sort((a, b) => Number(b.connected) - Number(a.connected))
-            .map((gw) => (
-              <button
-                key={gw.name}
-                onClick={() => navigate('/gateways')}
-                className={`flex flex-col items-center gap-2 p-4 rounded-[var(--radius-lg)] border transition-colors cursor-pointer ${
-                  gw.connected
-                    ? 'border-[var(--success)]/30 bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] animate-[border-breathe_3s_ease-in-out_infinite]'
-                    : 'border-[var(--border-default)] bg-[var(--bg-secondary)] opacity-50 hover:opacity-70'
-                }`}
-              >
-                <Radio size={20} className={gw.connected ? 'text-[var(--success)]' : 'text-[var(--text-muted)]'} />
-                <span className="text-xs font-medium text-[var(--text-primary)]">{gw.name}</span>
-                <StatusDot status={gw.connected ? 'online' : 'offline'} />
-              </button>
-            ))}
-        </div>
-      </section>
+      {gatewayPlatforms.length > 0 && (
+        <section>
+          <h2 className="text-sm font-medium text-[var(--text-secondary)] mb-3">Gateway Platforms</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {gatewayPlatforms
+              .sort((a, b) => Number(b.connected) - Number(a.connected))
+              .map((gw) => (
+                <button
+                  key={gw.name}
+                  onClick={() => navigate('/gateways')}
+                  className={`flex flex-col items-center gap-2 p-4 rounded-[var(--radius-lg)] border transition-colors cursor-pointer ${
+                    gw.connected
+                      ? 'border-[var(--success)]/30 bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] animate-[border-breathe_3s_ease-in-out_infinite]'
+                      : 'border-[var(--border-default)] bg-[var(--bg-secondary)] opacity-50 hover:opacity-70'
+                  }`}
+                >
+                  <Radio size={20} className={gw.connected ? 'text-[var(--success)]' : 'text-[var(--text-muted)]'} />
+                  <span className="text-xs font-medium text-[var(--text-primary)] capitalize">{gw.name}</span>
+                  <StatusDot status={gw.connected ? 'online' : 'offline'} />
+                </button>
+              ))}
+          </div>
+        </section>
+      )}
 
-      {/* Bottom Split: Activity Feed + Provider Health */}
+      {!status?.gateway_running && gatewayPlatforms.length === 0 && (
+        <section className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] p-5">
+          <div className="flex items-center gap-2 text-[var(--text-muted)]">
+            <AlertCircle size={16} />
+            <span className="text-sm">Gateway is not running. No platforms connected.</span>
+          </div>
+        </section>
+      )}
+
+      {/* Bottom Split: Recent Sessions + Provider Health */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Activity */}
+        {/* Recent Sessions */}
         <section className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)]">
           <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--border-subtle)]">
-            <h2 className="text-sm font-medium text-[var(--text-primary)]">Recent Activity</h2>
+            <h2 className="text-sm font-medium text-[var(--text-primary)]">Recent Sessions</h2>
             <Activity size={14} className="text-[var(--text-muted)]" />
           </div>
           <div className="divide-y divide-[var(--border-subtle)]">
-            {mockActivity.map((item) => (
+            {recentSessions.length === 0 && (
+              <div className="px-5 py-6 text-center text-sm text-[var(--text-muted)]">No sessions yet</div>
+            )}
+            {recentSessions.map((session) => (
               <div
-                key={item.id}
-                className="flex items-start gap-3 px-5 py-3 animate-[fade-in-up_150ms_ease-out]"
+                key={session.id}
+                className="flex items-start gap-3 px-5 py-3 animate-[fade-in-up_150ms_ease-out] cursor-pointer hover:bg-[var(--bg-tertiary)] transition-colors"
+                onClick={() => navigate('/sessions')}
               >
-                <span className="mt-0.5 text-[var(--text-muted)]">{activityIcons[item.type]}</span>
+                <span className="mt-0.5 text-[var(--text-muted)]">
+                  {session.is_active ? <Clock size={14} /> : <MessageSquare size={14} />}
+                </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-[var(--text-primary)] truncate">{item.text}</p>
+                  <p className="text-sm text-[var(--text-primary)] truncate">
+                    {session.title || session.preview || `Session ${session.id}`}
+                  </p>
                   <p className="text-xs text-[var(--text-muted)] mt-0.5">
-                    {formatRelativeTime(item.time)}
+                    {session.source} &middot; {session.model} &middot; {session.message_count} msgs
                   </p>
                 </div>
+                {session.is_active && (
+                  <Badge variant="success">Active</Badge>
+                )}
               </div>
             ))}
           </div>
@@ -139,31 +159,21 @@ export default function Overview() {
         {/* Provider Health Summary */}
         <section className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)]">
           <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--border-subtle)]">
-            <h2 className="text-sm font-medium text-[var(--text-primary)]">Provider Health</h2>
+            <h2 className="text-sm font-medium text-[var(--text-primary)]">Provider Keys</h2>
           </div>
           <div className="divide-y divide-[var(--border-subtle)]">
-            {[
-              { name: 'OpenAI', configured: true, latency: '120ms' },
-              { name: 'Anthropic', configured: true, latency: '95ms' },
-              { name: 'DeepSeek', configured: true, latency: '180ms' },
-              { name: 'Gemini', configured: false, latency: null },
-              { name: 'Nous Portal', configured: true, latency: '110ms' },
-            ].map((provider) => (
-              <div key={provider.name} className="flex items-center justify-between px-5 py-3">
+            {providerEntries.length === 0 && (
+              <div className="px-5 py-6 text-center text-sm text-[var(--text-muted)]">No provider keys found</div>
+            )}
+            {providerEntries.map((provider) => (
+              <div key={provider.envKey} className="flex items-center justify-between px-5 py-3">
                 <div className="flex items-center gap-3">
                   <StatusDot status={provider.configured ? 'online' : 'unknown'} />
-                  <span className="text-sm text-[var(--text-primary)]">{provider.name}</span>
+                  <span className="text-sm text-[var(--text-primary)] capitalize">{provider.name.toLowerCase()}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  {provider.latency && (
-                    <span className="text-xs font-[var(--font-mono)] text-[var(--text-muted)]">
-                      {provider.latency}
-                    </span>
-                  )}
-                  <Badge variant={provider.configured ? 'success' : 'neutral'}>
-                    {provider.configured ? 'Configured' : 'Not Set'}
-                  </Badge>
-                </div>
+                <Badge variant={provider.configured ? 'success' : 'neutral'}>
+                  {provider.configured ? 'Configured' : 'Not Set'}
+                </Badge>
               </div>
             ))}
           </div>

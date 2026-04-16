@@ -3,53 +3,36 @@ import { Zap } from 'lucide-react'
 import SearchInput from '../components/SearchInput'
 import Badge from '../components/Badge'
 import { cn } from '../lib/utils'
-
-interface Skill {
-  name: string
-  description: string
-  category: string
-  source: 'auto-generated' | 'manual' | 'hub'
-  usage_count: number
-  enabled: boolean
-}
-
-const mockSkills: Skill[] = [
-  { name: 'web-search', description: 'Search the web using DuckDuckGo or Google and return relevant results.', category: 'search', source: 'hub', usage_count: 342, enabled: true },
-  { name: 'code-interpreter', description: 'Execute Python code in a sandboxed environment and return stdout/stderr.', category: 'code', source: 'hub', usage_count: 218, enabled: true },
-  { name: 'read-file', description: 'Read the contents of a local file given its path.', category: 'filesystem', source: 'auto-generated', usage_count: 567, enabled: true },
-  { name: 'write-file', description: 'Write content to a local file, creating directories as needed.', category: 'filesystem', source: 'auto-generated', usage_count: 389, enabled: true },
-  { name: 'shell-exec', description: 'Execute a shell command and return its output.', category: 'system', source: 'auto-generated', usage_count: 445, enabled: true },
-  { name: 'image-gen', description: 'Generate images using DALL-E or Stable Diffusion given a text prompt.', category: 'media', source: 'hub', usage_count: 78, enabled: true },
-  { name: 'summarize-url', description: 'Fetch a URL and return a concise summary of its content.', category: 'search', source: 'manual', usage_count: 156, enabled: true },
-  { name: 'git-operations', description: 'Perform git operations like commit, push, pull, and branch management.', category: 'code', source: 'auto-generated', usage_count: 234, enabled: true },
-  { name: 'database-query', description: 'Execute SQL queries against configured PostgreSQL or SQLite databases.', category: 'data', source: 'manual', usage_count: 45, enabled: false },
-  { name: 'email-send', description: 'Send emails via configured SMTP or API-based email providers.', category: 'communication', source: 'manual', usage_count: 12, enabled: false },
-  { name: 'calendar-sync', description: 'Sync and manage events with Google Calendar or Outlook.', category: 'productivity', source: 'hub', usage_count: 0, enabled: false },
-  { name: 'pdf-parse', description: 'Extract text and tables from PDF documents.', category: 'data', source: 'hub', usage_count: 89, enabled: true },
-]
-
-const sourceColors: Record<string, 'info' | 'success' | 'warning'> = {
-  'auto-generated': 'info',
-  manual: 'warning',
-  hub: 'success',
-}
+import { useSkills } from '../api/hooks'
 
 export default function Skills() {
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
 
+  const { data: skills, isLoading } = useSkills()
+
   const categories = useMemo(() => {
-    const cats = new Set(mockSkills.map((s) => s.category))
+    if (!skills) return ['all']
+    const cats = new Set(skills.map((s) => s.category))
     return ['all', ...Array.from(cats).sort()]
-  }, [])
+  }, [skills])
 
   const filtered = useMemo(() => {
-    return mockSkills.filter((s) => {
+    if (!skills) return []
+    return skills.filter((s) => {
       if (search && !s.name.toLowerCase().includes(search.toLowerCase()) && !s.description.toLowerCase().includes(search.toLowerCase())) return false
       if (categoryFilter !== 'all' && s.category !== categoryFilter) return false
       return true
     })
-  }, [search, categoryFilter])
+  }, [skills, search, categoryFilter])
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20 text-sm text-[var(--text-muted)]">
+        Loading skills...
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -106,10 +89,9 @@ export default function Skills() {
             <p className="text-xs text-[var(--text-secondary)] line-clamp-2 mb-3">{skill.description}</p>
             <div className="flex items-center gap-2 flex-wrap">
               <Badge variant="neutral">{skill.category}</Badge>
-              <Badge variant={sourceColors[skill.source]}>{skill.source}</Badge>
-              <span className="ml-auto text-[10px] font-[var(--font-mono)] text-[var(--text-muted)]">
-                {skill.usage_count} uses
-              </span>
+              <Badge variant={skill.enabled ? 'success' : 'warning'}>
+                {skill.enabled ? 'enabled' : 'disabled'}
+              </Badge>
             </div>
           </div>
         ))}

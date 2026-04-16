@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
-import type { CronJob } from './types'
 
 // Status
 export function useStatus() {
@@ -64,43 +63,5 @@ export function useLogs(params?: { level?: string; search?: string; limit?: numb
     queryKey: ['logs', params],
     queryFn: () => api.getLogs(params),
     refetchInterval: 5_000,
-  })
-}
-
-// Cron
-export function useCronJobs() {
-  return useQuery({ queryKey: ['cron'], queryFn: api.getCronJobs })
-}
-
-export function useCreateCronJob() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (job: Omit<CronJob, 'id' | 'last_run' | 'next_run'>) => api.createCronJob(job),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['cron'] }),
-  })
-}
-
-export function useUpdateCronJob() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, ...job }: Partial<CronJob> & { id: string }) => api.updateCronJob(id, job),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['cron'] }),
-  })
-}
-
-export function useDeleteCronJob() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (id: string) => api.deleteCronJob(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['cron'] }),
-  })
-}
-
-// Gateways
-export function useGateways() {
-  return useQuery({
-    queryKey: ['gateways'],
-    queryFn: api.getGateways,
-    refetchInterval: 30_000,
   })
 }

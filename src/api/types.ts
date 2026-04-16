@@ -1,71 +1,93 @@
 // Hermes Agent API response types
-// Based on PRD API audit — to be confirmed against actual Hermes source
+// Matched against real Hermes Agent v0.9.0 API
 
 export interface HealthResponse {
   status: string
 }
 
 export interface AgentStatus {
-  status: 'online' | 'offline' | 'degraded'
   version: string
-  uptime: string
-  gateway_status: Record<string, boolean>
+  release_date: string
+  hermes_home: string
+  config_path: string
+  env_path: string
+  config_version: number
+  latest_config_version: number
+  gateway_running: boolean
+  gateway_pid: number | null
+  gateway_state: string | null
+  gateway_platforms: Record<string, GatewayPlatformStatus>
+  gateway_exit_reason: string | null
+  gateway_updated_at: string | null
+  active_sessions: number
+}
+
+export interface GatewayPlatformStatus {
+  connected?: boolean
+  last_active?: string | null
+  error?: string
+  [key: string]: unknown
 }
 
 export interface EnvVariable {
-  key: string
-  value: string
-  masked: boolean
+  is_set: boolean
+  redacted_value: string
+  description: string
+  url: string
+  category: string
+  is_password: boolean
+  tools: string[]
+  advanced: boolean
 }
 
-export interface Provider {
-  name: string
-  type: 'oauth' | 'api_key'
-  configured: boolean
-  keys: { name: string; masked_value: string }[]
-  auth_status?: 'connected' | 'disconnected'
-  get_key_url?: string
-}
+/** The /api/env response is keyed by env var name */
+export type EnvResponse = Record<string, EnvVariable>
 
 export interface Session {
   id: string
-  title: string
   source: string
+  user_id: string | null
   model: string
-  messages: number
-  tool_calls: number
-  created_at: string
-  updated_at: string
+  model_config: string
+  system_prompt: string
+  parent_session_id: string | null
+  started_at: number
+  ended_at: number | null
+  end_reason: string | null
+  message_count: number
+  tool_call_count: number
+  input_tokens: number
+  output_tokens: number
+  cache_read_tokens: number
+  cache_write_tokens: number
+  reasoning_tokens: number
+  billing_provider: string
+  billing_base_url: string
+  estimated_cost_usd: number
+  title: string
+  last_active: number
+  preview: string
+  is_active: boolean
 }
 
-export interface SessionDetail extends Session {
-  conversation: {
-    role: 'user' | 'assistant' | 'system' | 'tool'
-    content: string
-    timestamp: string
-    tool_name?: string
-  }[]
-  token_usage: {
-    input: number
-    output: number
-    total: number
-  }
+export interface SessionsResponse {
+  sessions: Session[]
 }
 
 export interface Skill {
   name: string
   description: string
   category: string
-  source: 'auto-generated' | 'manual' | 'hub'
-  usage_count: number
   enabled: boolean
 }
 
-export interface LogEntry {
-  timestamp: string
-  level: 'DEBUG' | 'INFO' | 'WARN' | 'ERROR'
-  module: string
-  message: string
+export interface LogsResponse {
+  file: string
+  lines: string[]
+}
+
+export interface Config {
+  [key: string]: unknown
 }
 
 export interface CronJob {
@@ -78,16 +100,4 @@ export interface CronJob {
   last_run: string | null
   next_run: string | null
   prompt: string
-}
-
-export interface Gateway {
-  name: string
-  platform: string
-  connected: boolean
-  last_active: string | null
-  error?: string
-}
-
-export interface Config {
-  [key: string]: unknown
 }

@@ -2,14 +2,16 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 import { ArrowDown } from 'lucide-react'
 import SearchInput from '../components/SearchInput'
 import { cn } from '../lib/utils'
+import { useLogs } from '../api/hooks'
 
 type LogLevel = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR'
 
-interface LogEntry {
+interface ParsedLogLine {
   id: number
-  timestamp: string
-  level: LogLevel
-  module: string
+  raw: string
+  level: LogLevel | null
+  timestamp: string | null
+  module: string | null
   message: string
 }
 
@@ -20,65 +22,77 @@ const levelColors: Record<LogLevel, string> = {
   ERROR: 'text-[var(--danger)]',
 }
 
-// Mock data
-const generateMockLogs = (): LogEntry[] => {
-  const modules = ['gateway.telegram', 'gateway.discord', 'core.session', 'core.skill', 'core.cron', 'api.server', 'llm.openai', 'llm.anthropic']
-  const levels: LogLevel[] = ['DEBUG', 'INFO', 'INFO', 'INFO', 'WARN', 'ERROR']
-  const messages = [
-    'Message received from user',
-    'Session created successfully',
-    'Tool execution completed',
-    'Skill loaded from hub',
-    'Gateway connection established',
-    'API request processed in 45ms',
-    'Cron job triggered: daily-digest',
-    'Token count: 1,247 input / 892 output',
-    'Rate limit approaching for OpenAI API',
-    'Connection timeout to Discord gateway, retrying...',
-    'Failed to parse response from LLM provider',
-    'WebSocket connection dropped, reconnecting...',
-    'Config file reloaded successfully',
-    'New skill registered: web-search',
-    'Session #482 ended, 12 messages processed',
-  ]
+/** Parse a raw log line into structured fields.
+ *  Lines may be structured like: "2026-04-16 09:30:00 [INFO] [module] message"
+ *  or they may just be plain text. We do best-effort parsing.
+ */
+function parseLogLine(raw: string, id: number): ParsedLogLine {
+  const trimmed = raw.replace(/\n$/, '')
 
-  return Array.from({ length: 80 }, (_, i) => {
-    const date = new Date('2026-04-16T09:30:00Z')
-    date.setSeconds(date.getSeconds() - i * 15)
-    return {
-      id: i,
-      timestamp: date.toISOString(),
-      level: levels[Math.floor(Math.random() * levels.length)],
-      module: modules[Math.floor(Math.random() * modules.length)],
-      message: messages[Math.floor(Math.random() * messages.length)],
-    }
-  })
+  // Try to extract level
+  let level: LogLevel | null = null
+  if (/\bDEBUG\b/i.test(trimmed)) level = 'DEBUG'
+  else if (/\bERROR\b/i.test(trimmed)) level = 'ERROR'
+  else if (/\bWARN(ING)?\b/i.test(trimmed)) level = 'WARN'
+  else if (/\bINFO\b/i.test(trimmed)) level = 'INFO'
+
+  // Try to extract timestamp (ISO or common formats)
+  const tsMatch = trimmed.match(/^(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}[^ ]*)/)
+  const timestamp = tsMatch ? tsMatch[1] : null
+
+  // Try to extract module in brackets like [gateway.telegram]
+  const moduleMatch = trimmed.match(/\[([a-zA-Z0-9_.]+)\]/)
+  const module = moduleMatch ? moduleMatch[1] : null
+
+  return {
+    id,
+    raw: trimmed,
+    level,
+    timestamp,
+    module,
+    message: trimmed,
+  }
 }
-
-const mockLogs = generateMockLogs()
 
 export default function Logs() {
   const [search, setSearch] = useState('')
-  const [activeLevels, setActiveLevels] = useState<Set<LogLevel>>(new Set(['DEBUG', 'INFO', 'WARN', 'ERROR']))
+  const [activeLevels, setActiveLevels] = useState<Set<LogLevel | 'ALL'>>(new Set(['ALL']))
   const [autoScroll, setAutoScroll] = useState(true)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const toggleLevel = (level: LogLevel) => {
+  const { data: logsData, isLoading } = useLogs()
+
+  const parsedLogs = useMemo(() => {
+    if (!logsData?.lines) return []
+    return logsData.lines.map((line, i) => parseLogLine(line, i))
+  }, [logsData])
+
+  const toggleLevel = (level: LogLevel | 'ALL') => {
     setActiveLevels((prev) => {
+      if (level === 'ALL') {
+        return new Set(['ALL'])
+      }
       const next = new Set(prev)
-      if (next.has(level)) next.delete(level)
-      else next.add(level)
+      next.delete('ALL')
+      if (next.has(level)) {
+        next.delete(level)
+        if (next.size === 0) return new Set(['ALL'])
+      } else {
+        next.add(level)
+      }
       return next
     })
   }
 
   const filtered = useMemo(() => {
-    return mockLogs.filter((log) => {
-      if (!activeLevels.has(log.level)) return false
-      if (search && !log.message.toLowerCase().includes(search.toLowerCase()) && !log.module.toLowerCase().includes(search.toLowerCase())) return false
+    return parsedLogs.filter((log) => {
+      // Level filter
+      if (!activeLevels.has('ALL') && log.level && !activeLevels.has(log.level)) return false
+      // Search filter
+      if (search && !log.message.toLowerCase().includes(search.toLowerCase())) return false
       return true
     })
-  }, [search, activeLevels])
+  }, [parsedLogs, search, activeLevels])
 
   useEffect(() => {
     if (autoScroll && containerRef.current) {
@@ -86,12 +100,7 @@ export default function Logs() {
     }
   }, [filtered, autoScroll])
 
-  const formatTime = (ts: string) => {
-    const d = new Date(ts)
-    return d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
-  }
-
-  const levelBtnClass = (level: LogLevel) =>
+  const levelBtnClass = (level: LogLevel | 'ALL') =>
     cn(
       'px-2.5 py-1 text-xs font-medium rounded-[var(--radius-sm)] transition-colors border',
       activeLevels.has(level)
@@ -110,7 +119,7 @@ export default function Logs() {
       {/* Toolbar */}
       <div className="flex items-center gap-3 mb-4 flex-wrap">
         <div className="flex items-center gap-1.5">
-          {(['DEBUG', 'INFO', 'WARN', 'ERROR'] as LogLevel[]).map((level) => (
+          {(['ALL', 'DEBUG', 'INFO', 'WARN', 'ERROR'] as (LogLevel | 'ALL')[]).map((level) => (
             <button key={level} onClick={() => toggleLevel(level)} className={levelBtnClass(level)}>
               {level}
             </button>
@@ -135,7 +144,13 @@ export default function Logs() {
         ref={containerRef}
         className="flex-1 overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[#0c0c0e] font-[var(--font-mono)] text-xs leading-6"
       >
-        {filtered.map((log) => (
+        {isLoading && (
+          <div className="flex items-center justify-center h-full text-[var(--text-muted)]">
+            Loading logs...
+          </div>
+        )}
+
+        {!isLoading && filtered.map((log) => (
           <div
             key={log.id}
             className={cn(
@@ -143,14 +158,16 @@ export default function Logs() {
               log.level === 'ERROR' && 'border-l-2 border-l-[var(--danger)] bg-[var(--danger-muted)]/20'
             )}
           >
-            <span className="shrink-0 w-[72px] text-[var(--text-muted)]">{formatTime(log.timestamp)}</span>
-            <span className={cn('shrink-0 w-[52px] font-semibold', levelColors[log.level])}>{log.level.padEnd(5)}</span>
-            <span className="shrink-0 w-[180px] text-[var(--text-secondary)] truncate">[{log.module}]</span>
+            {log.level && (
+              <span className={cn('shrink-0 w-[52px] font-semibold', levelColors[log.level])}>
+                {log.level.padEnd(5)}
+              </span>
+            )}
             <span className="text-[var(--text-primary)] break-all">{log.message}</span>
           </div>
         ))}
 
-        {filtered.length === 0 && (
+        {!isLoading && filtered.length === 0 && (
           <div className="flex items-center justify-center h-full text-[var(--text-muted)]">
             No logs match the current filter
           </div>
@@ -160,7 +177,7 @@ export default function Logs() {
       {/* Status bar */}
       <div className="mt-2 flex items-center justify-between text-[10px] text-[var(--text-muted)]">
         <span>{filtered.length} entries shown</span>
-        <span>Total: {mockLogs.length} entries</span>
+        <span>Total: {parsedLogs.length} entries{logsData?.file ? ` (${logsData.file})` : ''}</span>
       </div>
     </div>
   )
