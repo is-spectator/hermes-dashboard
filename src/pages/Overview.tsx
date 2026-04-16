@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Activity, Radio, Zap, MessageSquare, Clock, AlertCircle } from 'lucide-react'
 import MetricCard from '../components/MetricCard'
@@ -8,7 +7,6 @@ import { useStatus, useSkills, useSessions, useEnv } from '../api/hooks'
 
 export default function Overview() {
   const navigate = useNavigate()
-  const [loaded, setLoaded] = useState(false)
 
   const { data: status, isLoading: statusLoading, error: statusError } = useStatus()
   const { data: skills } = useSkills()
@@ -16,10 +14,6 @@ export default function Overview() {
   const { data: envData } = useEnv()
 
   const sessions = sessionsData?.sessions ?? []
-
-  useEffect(() => {
-    setLoaded(true)
-  }, [])
 
   // Derive gateway platforms from status
   const gatewayPlatforms = status?.gateway_platforms
@@ -65,7 +59,7 @@ export default function Overview() {
         />
         <MetricCard
           title="Total Messages"
-          value={loaded ? totalMessages : 0}
+          value={totalMessages}
           icon={<MessageSquare size={16} />}
           subtitle={`${activeSessions} active session${activeSessions !== 1 ? 's' : ''}`}
         />
@@ -78,7 +72,7 @@ export default function Overview() {
         />
         <MetricCard
           title="Skills"
-          value={loaded ? enabledSkills : 0}
+          value={enabledSkills}
           icon={<Zap size={16} />}
           subtitle={`${skills?.length ?? 0} total`}
         />

@@ -115,7 +115,7 @@ export default function Sessions() {
   const [selectedSession, setSelectedSession] = useState<Session | null>(null)
 
   const { data: sessionsData, isLoading } = useSessions()
-  const sessions = sessionsData?.sessions ?? []
+  const sessions = useMemo(() => sessionsData?.sessions ?? [], [sessionsData])
 
   // Derive unique sources for filter
   const sources = useMemo(() => {
