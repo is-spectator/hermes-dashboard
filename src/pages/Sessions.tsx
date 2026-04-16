@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react'
-import { MessageSquare, Terminal, Hash, Wrench, DollarSign } from 'lucide-react'
+import { MessageSquare, Terminal, Hash, Wrench, DollarSign, AlertCircle } from 'lucide-react'
 import MetricCard from '../components/MetricCard'
 import DataTable, { type Column } from '../components/DataTable'
 import SearchInput from '../components/SearchInput'
 import SideDrawer from '../components/SideDrawer'
 import Badge from '../components/Badge'
 import { formatRelativeTime } from '../lib/utils'
+import { useDebounce } from '../lib/useDebounce'
 import { useSessions, useSessionMessages } from '../api/hooks'
 import type { Session } from '../api/types'
 
@@ -109,102 +110,108 @@ const sourceIcons: Record<string, React.ReactNode> = {
   cron: <Wrench size={14} />,
 }
 
+const columns: Column<Session>[] = [
+  {
+    key: 'title',
+    header: 'Title',
+    render: (row) => (
+      <div className="max-w-[300px]">
+        <span className="font-medium truncate block">{row.title || row.preview || `Session ${row.id}`}</span>
+        {row.is_active && <Badge variant="success">Active</Badge>}
+      </div>
+    ),
+  },
+  {
+    key: 'source',
+    header: 'Source',
+    width: '100px',
+    render: (row) => (
+      <span className="inline-flex items-center gap-1.5 text-[var(--text-secondary)]">
+        {sourceIcons[row.source] || <MessageSquare size={14} />}
+        <span className="text-xs">{row.source}</span>
+      </span>
+    ),
+  },
+  {
+    key: 'model',
+    header: 'Model',
+    width: '160px',
+    render: (row) => <Badge variant="info" style="outline">{row.model}</Badge>,
+  },
+  {
+    key: 'messages',
+    header: 'Messages',
+    width: '90px',
+    render: (row) => <span className="font-[var(--font-mono)] text-xs">{row.message_count}</span>,
+  },
+  {
+    key: 'tools',
+    header: 'Tools',
+    width: '80px',
+    render: (row) => <span className="font-[var(--font-mono)] text-xs">{row.tool_call_count}</span>,
+  },
+  {
+    key: 'cost',
+    header: 'Cost',
+    width: '80px',
+    render: (row) => (
+      <span className="font-[var(--font-mono)] text-xs">
+        ${(row.estimated_cost_usd ?? 0).toFixed(4)}
+      </span>
+    ),
+  },
+  {
+    key: 'time',
+    header: 'Time',
+    width: '100px',
+    render: (row) => (
+      <span className="text-xs text-[var(--text-muted)]">
+        {formatRelativeTime(new Date(row.last_active * 1000).toISOString())}
+      </span>
+    ),
+  },
+]
+
 export default function Sessions() {
   const [search, setSearch] = useState('')
   const [sourceFilter, setSourceFilter] = useState('All')
   const [selectedSession, setSelectedSession] = useState<Session | null>(null)
 
-  const { data: sessionsData, isLoading } = useSessions()
+  // Debounce the search input so we don't fire an API call on every keystroke
+  const debouncedSearch = useDebounce(search, 300)
+
+  // Pass server-side search & source params to the API
+  const queryParams = useMemo(() => {
+    const params: { search?: string; source?: string } = {}
+    if (debouncedSearch) params.search = debouncedSearch
+    if (sourceFilter !== 'All') params.source = sourceFilter
+    return params
+  }, [debouncedSearch, sourceFilter])
+
+  const { data: sessionsData, isLoading, error } = useSessions(queryParams)
   const sessions = useMemo(() => sessionsData?.sessions ?? [], [sessionsData])
 
-  // Derive unique sources for filter
+  // Derive unique sources for filter — always fetch unfiltered list for the toolbar
+  // We use a separate unfiltered query to populate the source buttons
+  const { data: allSessionsData } = useSessions()
+  const allSessions = useMemo(() => allSessionsData?.sessions ?? [], [allSessionsData])
+
   const sources = useMemo(() => {
-    const uniqueSources = new Set(sessions.map((s) => s.source))
+    const uniqueSources = new Set(allSessions.map((s) => s.source))
     return ['All', ...Array.from(uniqueSources).sort()]
-  }, [sessions])
+  }, [allSessions])
 
-  const filtered = useMemo(() => {
-    return sessions.filter((s) => {
-      const title = s.title || s.preview || s.id
-      if (search && !title.toLowerCase().includes(search.toLowerCase()) && !s.model.toLowerCase().includes(search.toLowerCase())) return false
-      if (sourceFilter !== 'All' && s.source !== sourceFilter) return false
-      return true
-    })
-  }, [sessions, search, sourceFilter])
-
-  const totalMessages = sessions.reduce((a, s) => a + s.message_count, 0)
-  const avgMessages = sessions.length ? Math.round(totalMessages / sessions.length) : 0
-  const totalCost = sessions.reduce((a, s) => a + (s.estimated_cost_usd ?? 0), 0)
-
-  const columns: Column<Session>[] = [
-    {
-      key: 'title',
-      header: 'Title',
-      render: (row) => (
-        <div className="max-w-[300px]">
-          <span className="font-medium truncate block">{row.title || row.preview || `Session ${row.id}`}</span>
-          {row.is_active && <Badge variant="success">Active</Badge>}
-        </div>
-      ),
-    },
-    {
-      key: 'source',
-      header: 'Source',
-      width: '100px',
-      render: (row) => (
-        <span className="inline-flex items-center gap-1.5 text-[var(--text-secondary)]">
-          {sourceIcons[row.source] || <MessageSquare size={14} />}
-          <span className="text-xs">{row.source}</span>
-        </span>
-      ),
-    },
-    {
-      key: 'model',
-      header: 'Model',
-      width: '160px',
-      render: (row) => <Badge variant="info" style="outline">{row.model}</Badge>,
-    },
-    {
-      key: 'messages',
-      header: 'Messages',
-      width: '90px',
-      render: (row) => <span className="font-[var(--font-mono)] text-xs">{row.message_count}</span>,
-    },
-    {
-      key: 'tools',
-      header: 'Tools',
-      width: '80px',
-      render: (row) => <span className="font-[var(--font-mono)] text-xs">{row.tool_call_count}</span>,
-    },
-    {
-      key: 'cost',
-      header: 'Cost',
-      width: '80px',
-      render: (row) => (
-        <span className="font-[var(--font-mono)] text-xs">
-          ${(row.estimated_cost_usd ?? 0).toFixed(4)}
-        </span>
-      ),
-    },
-    {
-      key: 'time',
-      header: 'Time',
-      width: '100px',
-      render: (row) => (
-        <span className="text-xs text-[var(--text-muted)]">
-          {formatRelativeTime(new Date(row.last_active * 1000).toISOString())}
-        </span>
-      ),
-    },
-  ]
+  // Stats are computed from the full unfiltered list
+  const totalToolCalls = allSessions.reduce((a, s) => a + s.tool_call_count, 0)
+  const totalCost = allSessions.reduce((a, s) => a + (s.estimated_cost_usd ?? 0), 0)
 
   return (
     <div className="space-y-6">
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard title="Total Sessions" value={sessions.length} />
-        <MetricCard title="Active" value={sessions.filter((s) => s.is_active).length} subtitle="sessions" />
-        <MetricCard title="Avg Messages" value={avgMessages} subtitle="per session" />
+        <MetricCard title="Total Sessions" value={allSessions.length} />
+        <MetricCard title="Active" value={allSessions.filter((s) => s.is_active).length} subtitle="sessions" />
+        <MetricCard title="Total Tool Calls" value={totalToolCalls} icon={<Wrench size={16} />} />
         <MetricCard title="Total Cost" value={`$${totalCost.toFixed(2)}`} icon={<DollarSign size={16} />} animate={false} />
       </div>
 
@@ -236,13 +243,25 @@ export default function Sessions() {
         </div>
       </div>
 
-      {/* Table */}
-      {isLoading ? (
-        <div className="text-center py-12 text-sm text-[var(--text-muted)]">Loading sessions...</div>
+      {/* Table — error state takes priority over empty state */}
+      {error ? (
+        <div
+          className="flex items-center gap-3 rounded-[var(--radius-lg)] p-6 text-sm"
+          style={{
+            background: 'rgba(239,68,68,0.06)',
+            border: '1px solid rgba(239,68,68,0.2)',
+          }}
+        >
+          <AlertCircle size={18} className="text-red-400 shrink-0" />
+          <span className="text-red-300">
+            Failed to load sessions: {error instanceof Error ? error.message : 'Unknown error'}
+          </span>
+        </div>
       ) : (
         <DataTable
           columns={columns}
-          data={filtered}
+          data={sessions}
+          loading={isLoading}
           rowKey={(row) => row.id}
           onRowClick={(row) => setSelectedSession(row)}
           emptyMessage="No sessions found"
