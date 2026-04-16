@@ -81,11 +81,11 @@ export default function DashboardLayout() {
     <div className="flex min-h-screen bg-[var(--bg-primary)]">
       {/* Sidebar */}
       <aside
-        className={cn(
-          'fixed top-0 left-0 h-screen z-40 flex flex-col border-r border-[var(--border-default)] bg-[var(--bg-secondary)] transition-[width]',
-          sidebarExpanded ? 'w-[200px]' : 'w-16'
-        )}
-        style={{ transitionDuration: '200ms', transitionTimingFunction: 'ease-out' }}
+        className="fixed top-0 left-0 h-screen z-40 flex flex-col border-r border-[var(--border-default)] bg-[var(--bg-secondary)]"
+        style={{
+          width: sidebarExpanded ? '220px' : '72px',
+          transition: 'width 200ms ease-out',
+        }}
       >
         {/* Logo */}
         <div className="flex items-center h-14 px-4 border-b border-[var(--border-subtle)]">
@@ -149,11 +149,11 @@ export default function DashboardLayout() {
 
       {/* Main Content */}
       <div
-        className={cn(
-          'flex-1 transition-[margin-left]',
-          sidebarExpanded ? 'ml-[200px]' : 'ml-16'
-        )}
-        style={{ transitionDuration: '200ms', transitionTimingFunction: 'ease-out' }}
+        className="flex-1"
+        style={{
+          marginLeft: sidebarExpanded ? '220px' : '72px',
+          transition: 'margin-left 200ms ease-out',
+        }}
       >
         {/* Top Bar */}
         <header className="sticky top-0 z-30 h-14 flex items-center justify-between px-6 border-b border-[var(--border-default)] bg-[var(--bg-primary)]/80 backdrop-blur-sm">
