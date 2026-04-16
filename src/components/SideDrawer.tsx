@@ -23,18 +23,24 @@ export default function SideDrawer({ open, onClose, title, children, width = '48
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop with enhanced blur */}
       <div
-        className="fixed inset-0 z-50 bg-black/40 transition-opacity"
+        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-md transition-opacity animate-[fade-in-up_150ms_ease-out]"
         onClick={onClose}
       />
-      {/* Drawer */}
+      {/* Drawer with spring-like animation */}
       <div
-        className="fixed top-0 right-0 z-50 h-screen bg-[var(--bg-elevated)] border-l border-[var(--border-default)] shadow-lg overflow-y-auto animate-[slide-in-right_200ms_ease-out]"
-        style={{ width }}
+        className="fixed top-0 right-0 z-50 h-screen bg-[var(--bg-elevated)] border-l border-[var(--border-default)] shadow-lg overflow-y-auto"
+        style={{
+          width,
+          animation: 'drawer-in 300ms cubic-bezier(0.34, 1.56, 0.64, 1)',
+        }}
       >
+        {/* Top gradient overlay */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-16 z-10 bg-gradient-to-b from-[var(--bg-elevated)] to-transparent" />
+
         {title && (
-          <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-subtle)]">
+          <div className="relative z-20 flex items-center justify-between px-5 py-4 border-b border-[var(--border-subtle)]">
             <h2 className="text-sm font-semibold text-[var(--text-primary)]">{title}</h2>
             <button
               onClick={onClose}
@@ -44,7 +50,7 @@ export default function SideDrawer({ open, onClose, title, children, width = '48
             </button>
           </div>
         )}
-        <div className="p-5">{children}</div>
+        <div className="relative z-20 p-5">{children}</div>
       </div>
     </>
   )

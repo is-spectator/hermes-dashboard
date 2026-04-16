@@ -5,6 +5,7 @@ import MetricCard from '../components/MetricCard'
 import StatusDot from '../components/StatusDot'
 import Badge from '../components/Badge'
 import { useStatus, useSkills, useSessions, useEnv } from '../api/hooks'
+import { cn } from '../lib/utils'
 
 export default function Overview() {
   const navigate = useNavigate()
@@ -91,15 +92,19 @@ export default function Overview() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {gatewayPlatforms
               .sort((a, b) => Number(b.connected) - Number(a.connected))
-              .map((gw) => (
+              .map((gw, i) => (
                 <button
                   key={gw.name}
                   onClick={() => navigate('/gateways')}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-[var(--radius-lg)] border transition-colors cursor-pointer ${
+                  className={cn(
+                    'flex flex-col items-center gap-2 p-4 rounded-[var(--radius-lg)] border cursor-pointer transition-all duration-200',
                     gw.connected
-                      ? 'border-[var(--success)]/30 bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] animate-[border-breathe_3s_ease-in-out_infinite]'
-                      : 'border-[var(--border-default)] bg-[var(--bg-secondary)] opacity-50 hover:opacity-70'
-                  }`}
+                      ? 'border-[var(--success)]/30 bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] hover:scale-[1.02] animate-[border-breathe_3s_ease-in-out_infinite]'
+                      : 'border-[var(--border-default)] bg-[var(--bg-secondary)] opacity-50 hover:opacity-70 hover:scale-[1.02]'
+                  )}
+                  style={{
+                    animation: `fade-in-up 200ms ease-out ${i * 50}ms both${gw.connected ? ', border-breathe 3s ease-in-out infinite' : ''}`,
+                  }}
                 >
                   <Radio size={20} className={gw.connected ? 'text-[var(--success)]' : 'text-[var(--text-muted)]'} />
                   <span className="text-xs font-medium text-[var(--text-primary)] capitalize">{gw.name}</span>
@@ -131,12 +136,15 @@ export default function Overview() {
             {recentSessions.length === 0 && (
               <div className="px-5 py-6 text-center text-sm text-[var(--text-muted)]">No sessions yet</div>
             )}
-            {recentSessions.map((session) => (
+            {recentSessions.map((session, i) => (
               <div
                 key={session.id}
-                className="flex items-start gap-3 px-5 py-3 animate-[fade-in-up_150ms_ease-out] cursor-pointer hover:bg-[var(--bg-tertiary)] transition-colors"
+                className="group relative flex items-start gap-3 px-5 py-3 cursor-pointer hover:bg-[var(--bg-tertiary)] transition-colors"
+                style={{ animation: `fade-in-up 200ms ease-out ${i * 50}ms both` }}
                 onClick={() => navigate('/sessions')}
               >
+                {/* Hover accent bar */}
+                <span className="absolute left-0 top-0 bottom-0 w-0 group-hover:w-[3px] bg-[var(--accent)] transition-all duration-200 rounded-r" />
                 <span className="mt-0.5 text-[var(--text-muted)]">
                   {session.is_active ? <Clock size={14} /> : <MessageSquare size={14} />}
                 </span>
@@ -165,8 +173,12 @@ export default function Overview() {
             {providerEntries.length === 0 && (
               <div className="px-5 py-6 text-center text-sm text-[var(--text-muted)]">No provider keys found</div>
             )}
-            {providerEntries.map((provider) => (
-              <div key={provider.envKey} className="flex items-center justify-between px-5 py-3">
+            {providerEntries.map((provider, i) => (
+              <div
+                key={provider.envKey}
+                className="flex items-center justify-between px-5 py-3"
+                style={{ animation: `fade-in-up 200ms ease-out ${i * 50}ms both` }}
+              >
                 <div className="flex items-center gap-3">
                   <StatusDot status={provider.configured ? 'online' : 'unknown'} />
                   <span className="text-sm text-[var(--text-primary)] capitalize">{provider.name.toLowerCase()}</span>

@@ -89,7 +89,10 @@ export default function DashboardLayout() {
       >
         {/* Logo */}
         <div className="flex items-center h-14 px-4 border-b border-[var(--border-subtle)]">
-          <div className="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--accent)] flex items-center justify-center text-white font-bold text-sm font-[var(--font-mono)]">
+          <div
+            className="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--accent)] flex items-center justify-center text-white font-bold text-sm font-[var(--font-mono)]"
+            style={{ boxShadow: 'var(--glow-accent)' }}
+          >
             H
           </div>
           {sidebarExpanded && (
@@ -108,13 +111,28 @@ export default function DashboardLayout() {
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  'flex items-center gap-3 mx-2 my-0.5 px-3 h-9 rounded-[var(--radius-md)] text-sm transition-colors',
+                  'group relative flex items-center gap-3 mx-2 my-0.5 px-3 h-9 rounded-[var(--radius-md)] text-sm transition-all duration-200',
                   isActive
-                    ? 'bg-[var(--accent-subtle)] text-[var(--accent)]'
+                    ? 'text-[var(--accent)]'
                     : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
                 )}
+                style={isActive ? {
+                  background: 'linear-gradient(135deg, var(--accent-subtle), transparent 70%)',
+                } : undefined}
               >
-                <item.icon size={18} className="shrink-0" />
+                {/* Active accent bar */}
+                {isActive && (
+                  <span
+                    className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-[var(--accent)] animate-[slide-accent-in_200ms_ease-out]"
+                  />
+                )}
+                <item.icon
+                  size={18}
+                  className={cn(
+                    'shrink-0 transition-transform duration-200',
+                    !sidebarExpanded && 'group-hover:scale-110'
+                  )}
+                />
                 {sidebarExpanded && (
                   <span className="whitespace-nowrap">{item.label}</span>
                 )}
@@ -156,7 +174,7 @@ export default function DashboardLayout() {
         }}
       >
         {/* Top Bar */}
-        <header className="sticky top-0 z-30 h-14 flex items-center justify-between px-6 border-b border-[var(--border-default)] bg-[var(--bg-primary)]/80 backdrop-blur-sm">
+        <header className="sticky top-0 z-30 h-14 flex items-center justify-between px-6 bg-[var(--bg-primary)]/80 backdrop-blur-sm">
           <h1 className="text-sm font-medium text-[var(--text-primary)]">
             {navItems.find((item) => item.path === location.pathname)?.label || 'Hermes Dashboard'}
           </h1>
@@ -170,6 +188,8 @@ export default function DashboardLayout() {
               {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
             </button>
           </div>
+          {/* Subtle bottom gradient fade */}
+          <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--border-default)] to-transparent" />
         </header>
 
         {/* Page Content */}

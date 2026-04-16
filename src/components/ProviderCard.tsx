@@ -70,11 +70,12 @@ export default function ProviderCard({
   return (
     <div
       className={cn(
-        'rounded-[var(--radius-lg)] border bg-[var(--bg-secondary)] transition-colors',
+        'rounded-[var(--radius-lg)] border bg-[var(--bg-secondary)] transition-all duration-200 hover:translate-y-[-2px] hover:shadow-[var(--card-hover-shadow)]',
         configured
-          ? 'border-[var(--accent)]/30'
+          ? 'border-l-[3px] border-l-[var(--success)] border-r-[var(--border-default)] border-t-[var(--border-default)] border-b-[var(--border-default)]'
           : 'border-[var(--border-default)]'
       )}
+      style={configured ? { boxShadow: 'var(--glow-success)' } : undefined}
     >
       <button
         onClick={() => setExpanded(!expanded)}
@@ -96,9 +97,13 @@ export default function ProviderCard({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="inline-flex items-center gap-1 text-[10px] text-[var(--accent)] hover:underline"
+                  className="group/link inline-flex items-center gap-1 text-[10px] text-[var(--accent)]"
                 >
-                  Get Key <ExternalLink size={10} />
+                  <span className="relative">
+                    Get Key
+                    <span className="absolute inset-x-0 -bottom-px h-px bg-[var(--accent)] origin-left scale-x-0 group-hover/link:scale-x-100 transition-transform duration-200" />
+                  </span>
+                  <ExternalLink size={10} />
                 </a>
               )}
             </div>

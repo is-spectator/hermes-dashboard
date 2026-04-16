@@ -46,18 +46,27 @@ export default function MetricCard({ title, value, icon, subtitle, loading = fal
 
   if (loading) {
     return (
-      <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] p-5">
-        <div className="h-4 w-20 rounded bg-[var(--bg-tertiary)] animate-[shimmer_1.5s_linear_infinite] bg-[length:200%_100%] bg-gradient-to-r from-[var(--bg-tertiary)] via-[var(--border-default)] to-[var(--bg-tertiary)]" />
-        <div className="mt-3 h-8 w-16 rounded bg-[var(--bg-tertiary)] animate-[shimmer_1.5s_linear_infinite] bg-[length:200%_100%] bg-gradient-to-r from-[var(--bg-tertiary)] via-[var(--border-default)] to-[var(--bg-tertiary)]" />
+      <div className="relative rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] p-5 overflow-hidden">
+        {/* Shimmer top bar */}
+        <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-[var(--border-default)] to-transparent animate-[shimmer_1.5s_linear_infinite] bg-[length:200%_100%]" />
+        <div className="h-4 w-20 rounded bg-[var(--bg-tertiary)] animate-[shimmer_1.5s_linear_infinite] bg-[length:200%_100%] bg-gradient-to-r from-[var(--bg-tertiary)] via-[var(--border-default)]/50 to-[var(--bg-tertiary)]" />
+        <div className="mt-3 h-8 w-16 rounded bg-[var(--bg-tertiary)] animate-[shimmer_1.5s_linear_infinite] bg-[length:200%_100%] bg-gradient-to-r from-[var(--bg-tertiary)] via-[var(--border-default)]/50 to-[var(--bg-tertiary)]" />
       </div>
     )
   }
 
   return (
     <div className={cn(
-      'rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] p-5',
-      'transition-colors hover:border-[var(--border-subtle)]'
-    )}>
+      'group relative rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] p-5 overflow-hidden',
+      'transition-all duration-200 hover:shadow-[var(--card-hover-shadow)]'
+    )}
+    style={{ boxShadow: 'var(--inner-glow)' }}
+    >
+      {/* Gradient top border */}
+      <div className="absolute inset-x-0 top-0 h-[2px]" style={{
+        background: 'linear-gradient(90deg, var(--accent), var(--accent) 40%, transparent 100%)',
+        opacity: 0.6,
+      }} />
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
           {title}
@@ -65,12 +74,12 @@ export default function MetricCard({ title, value, icon, subtitle, loading = fal
         {icon && <span className="text-[var(--text-muted)]">{icon}</span>}
       </div>
       <div className="mt-2">
-        <span className="text-2xl font-semibold font-[var(--font-mono)] text-[var(--text-primary)]">
+        <span className="text-[1.75rem] font-semibold font-[var(--font-mono)] text-[var(--text-primary)] leading-none" style={{ fontVariantNumeric: 'tabular-nums' }}>
           {numericValue !== null ? displayed : value}
         </span>
       </div>
       {subtitle && (
-        <p className="mt-1 text-xs text-[var(--text-secondary)]">{subtitle}</p>
+        <p className="mt-1.5 text-xs text-[var(--text-secondary)]">{subtitle}</p>
       )}
     </div>
   )

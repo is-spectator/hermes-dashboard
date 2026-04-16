@@ -70,15 +70,19 @@ export default function Gateways() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {gateways
               .sort((a, b) => Number(b.connected) - Number(a.connected))
-              .map((gw) => (
+              .map((gw, i) => (
                 <div
                   key={gw.name}
                   className={cn(
-                    'rounded-[var(--radius-lg)] border bg-[var(--bg-secondary)] p-5 transition-all',
+                    'rounded-[var(--radius-lg)] border bg-[var(--bg-secondary)] p-5 transition-all duration-200',
+                    'hover:translate-y-[-2px] hover:shadow-[var(--card-hover-shadow)]',
                     gw.connected
-                      ? 'border-l-[3px] border-l-[var(--success)] border-r-[var(--border-default)] border-t-[var(--border-default)] border-b-[var(--border-default)] animate-[border-breathe_3s_ease-in-out_infinite]'
+                      ? 'border-l-[3px] border-l-[var(--success)] border-r-[var(--border-default)] border-t-[var(--border-default)] border-b-[var(--border-default)]'
                       : 'border-[var(--border-default)]'
                   )}
+                  style={{
+                    animation: `fade-in-up 200ms ease-out ${i * 60}ms both${gw.connected ? ', border-breathe 3s ease-in-out infinite' : ''}`,
+                  }}
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">

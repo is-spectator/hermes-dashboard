@@ -45,10 +45,10 @@ export default function Skills() {
               key={cat}
               onClick={() => setCategoryFilter(cat)}
               className={cn(
-                'px-2.5 py-1 text-xs rounded-full border transition-colors capitalize',
+                'px-2.5 py-1 text-xs rounded-full border transition-all duration-200 capitalize',
                 categoryFilter === cat
-                  ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
-                  : 'text-[var(--text-secondary)] border-[var(--border-default)] hover:bg-[var(--bg-tertiary)]'
+                  ? 'bg-[var(--accent)] text-white border-[var(--accent)] shadow-[var(--glow-accent)]'
+                  : 'text-[var(--text-secondary)] border-[var(--border-default)] hover:bg-[var(--bg-tertiary)] hover:border-[var(--text-muted)]'
               )}
             >
               {cat}
@@ -59,13 +59,19 @@ export default function Skills() {
 
       {/* Card Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map((skill) => (
+        {filtered.map((skill, i) => (
           <div
             key={skill.name}
             className={cn(
-              'rounded-[var(--radius-lg)] border bg-[var(--bg-secondary)] p-5 transition-colors hover:border-[var(--accent)]/30',
-              skill.enabled ? 'border-[var(--border-default)]' : 'border-[var(--border-default)] opacity-60'
+              'rounded-[var(--radius-lg)] border bg-[var(--bg-secondary)] p-5 transition-all duration-200',
+              skill.enabled
+                ? 'border-[var(--border-default)] hover:border-[var(--accent)]/40 hover:shadow-[0_0_15px_rgba(59,130,246,0.08)]'
+                : 'border-[var(--border-default)] opacity-60 hover:opacity-80'
             )}
+            style={{
+              animation: `fade-in-up 200ms ease-out ${i * 40}ms both`,
+              boxShadow: 'var(--inner-glow)',
+            }}
           >
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -74,13 +80,14 @@ export default function Skills() {
               </div>
               <div
                 className={cn(
-                  'w-8 h-4 rounded-full relative cursor-pointer transition-colors',
+                  'w-8 h-4 rounded-full relative cursor-pointer transition-all duration-300',
                   skill.enabled ? 'bg-[var(--accent)]' : 'bg-[var(--bg-tertiary)]'
                 )}
+                style={skill.enabled ? { boxShadow: '0 0 8px rgba(59, 130, 246, 0.3)' } : undefined}
               >
                 <div
                   className={cn(
-                    'absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform',
+                    'absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all duration-300',
                     skill.enabled ? 'left-[18px]' : 'left-[2px]'
                   )}
                 />

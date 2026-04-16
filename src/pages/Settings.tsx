@@ -37,11 +37,12 @@ export default function Settings() {
                   key={t}
                   onClick={() => setTheme(t)}
                   className={cn(
-                    'flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-lg)] border text-sm transition-colors',
+                    'flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-lg)] border text-sm transition-all duration-200',
                     theme === t
                       ? 'border-[var(--accent)] bg-[var(--accent-subtle)] text-[var(--accent)]'
-                      : 'border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
+                      : 'border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] hover:border-[var(--text-muted)]'
                   )}
+                  style={theme === t ? { boxShadow: 'var(--glow-accent)' } : undefined}
                 >
                   {t === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
                   <span className="capitalize">{t}</span>
@@ -53,7 +54,7 @@ export default function Settings() {
       </section>
 
       {/* Connection */}
-      <section className="border-t border-[var(--border-subtle)] pt-8">
+      <section className="pt-8" style={{ borderTop: '1px solid transparent', borderImage: 'linear-gradient(90deg, var(--accent)/0.3, var(--border-subtle), transparent) 1' }}>
         <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">Connection</h2>
         <p className="text-xs text-[var(--text-muted)] mb-4">Configure the Hermes Agent backend connection.</p>
 
@@ -81,7 +82,7 @@ export default function Settings() {
 
       {/* Agent Info (from /api/status) */}
       {status && (
-        <section className="border-t border-[var(--border-subtle)] pt-8">
+        <section className="pt-8" style={{ borderTop: '1px solid transparent', borderImage: 'linear-gradient(90deg, var(--accent)/0.3, var(--border-subtle), transparent) 1' }}>
           <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">Agent Info</h2>
           <p className="text-xs text-[var(--text-muted)] mb-4">Live information from the connected Hermes Agent.</p>
 
@@ -126,7 +127,7 @@ export default function Settings() {
       )}
 
       {/* Config (from /api/config) */}
-      <section className="border-t border-[var(--border-subtle)] pt-8">
+      <section className="pt-8" style={{ borderTop: '1px solid transparent', borderImage: 'linear-gradient(90deg, var(--accent)/0.3, var(--border-subtle), transparent) 1' }}>
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-sm font-semibold text-[var(--text-primary)]">Configuration</h2>
           {configLoading && <RefreshCw size={14} className="text-[var(--text-muted)] animate-spin" />}
@@ -134,10 +135,19 @@ export default function Settings() {
         <p className="text-xs text-[var(--text-muted)] mb-4">Raw configuration from the Hermes Agent.</p>
 
         {config ? (
-          <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[#0c0c0e] p-4 overflow-auto max-h-[400px]">
-            <pre className="text-xs font-[var(--font-mono)] text-[var(--text-primary)] whitespace-pre-wrap">
-              {JSON.stringify(config, null, 2)}
-            </pre>
+          <div className="relative rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[#0c0c0e] overflow-auto max-h-[400px]">
+            {/* Top gradient fade */}
+            <div className="pointer-events-none sticky top-0 left-0 right-0 h-4 z-10 bg-gradient-to-b from-[#0c0c0e] to-transparent" />
+            <div className="px-4 pb-4">
+              <pre className="text-xs font-[var(--font-mono)] text-[var(--text-primary)] whitespace-pre-wrap leading-6">
+                {JSON.stringify(config, null, 2).split('\n').map((line, i) => (
+                  <div key={i} className="flex hover:bg-white/[0.02]">
+                    <span className="inline-block w-[36px] text-right pr-3 text-[var(--text-muted)]/40 select-none shrink-0" style={{ fontVariantNumeric: 'tabular-nums' }}>{i + 1}</span>
+                    <span>{line}</span>
+                  </div>
+                ))}
+              </pre>
+            </div>
           </div>
         ) : (
           <div className="text-sm text-[var(--text-muted)]">
@@ -147,7 +157,7 @@ export default function Settings() {
       </section>
 
       {/* About */}
-      <section className="border-t border-[var(--border-subtle)] pt-8">
+      <section className="pt-8" style={{ borderTop: '1px solid transparent', borderImage: 'linear-gradient(90deg, var(--accent)/0.3, var(--border-subtle), transparent) 1' }}>
         <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">About</h2>
         <p className="text-xs text-[var(--text-muted)] mb-4">Hermes Dashboard v0.1.0</p>
 

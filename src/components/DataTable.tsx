@@ -53,7 +53,7 @@ export default function DataTable<T>({
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr className="border-b border-[var(--border-subtle)]">
+            <tr className="relative border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
               {columns.map((col) => (
                 <th
                   key={col.key}
@@ -63,18 +63,29 @@ export default function DataTable<T>({
                   {col.header}
                 </th>
               ))}
+              {/* Subtle bottom gradient fade */}
+              <th className="absolute inset-x-0 bottom-0 h-[1px] p-0 border-0" aria-hidden="true">
+                <div className="h-full bg-gradient-to-r from-[var(--accent)]/20 via-[var(--border-subtle)] to-transparent" />
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--border-subtle)]">
-            {data.map((row) => (
+            {data.map((row, index) => (
               <tr
                 key={rowKey(row)}
                 onClick={() => onRowClick?.(row)}
                 className={cn(
-                  'transition-colors',
+                  'group relative transition-colors',
                   onRowClick && 'cursor-pointer hover:bg-[var(--bg-tertiary)]'
                 )}
+                style={{
+                  animation: `fade-in-up 200ms ease-out ${index * 30}ms both`,
+                }}
               >
+                {/* Hover accent bar */}
+                <td className="absolute left-0 top-0 bottom-0 w-0 p-0 border-0 overflow-hidden group-hover:w-[3px] transition-all duration-200" aria-hidden="true">
+                  <div className="h-full bg-[var(--accent)]" />
+                </td>
                 {columns.map((col) => (
                   <td key={col.key} className="px-4 py-3 text-sm text-[var(--text-primary)]">
                     {col.render(row)}

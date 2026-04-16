@@ -139,39 +139,56 @@ export default function Logs() {
         </button>
       </div>
 
-      {/* Log View */}
-      <div
-        ref={containerRef}
-        className="flex-1 overflow-y-auto rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[#0c0c0e] font-[var(--font-mono)] text-xs leading-6"
-      >
-        {isLoading && (
-          <div className="flex items-center justify-center h-full text-[var(--text-muted)]">
-            Loading logs...
-          </div>
-        )}
+      {/* Log View — Premium Terminal */}
+      <div className="relative flex-1 rounded-[var(--radius-lg)] border border-[var(--border-default)] overflow-hidden">
+        {/* Scan-line effect (very faint) */}
+        <div
+          className="pointer-events-none absolute inset-0 z-10"
+          style={{
+            backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.01) 2px, rgba(255,255,255,0.01) 4px)',
+            backgroundSize: '100% 4px',
+          }}
+        />
+        {/* Top gradient fade */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-8 z-10 bg-gradient-to-b from-[#0c0c0e] to-transparent" />
 
-        {!isLoading && filtered.map((log) => (
-          <div
-            key={log.id}
-            className={cn(
-              'flex px-4 hover:bg-white/[0.02] transition-colors',
-              log.level === 'ERROR' && 'border-l-2 border-l-[var(--danger)] bg-[var(--danger-muted)]/20'
-            )}
-          >
-            {log.level && (
-              <span className={cn('shrink-0 w-[52px] font-semibold', levelColors[log.level])}>
-                {log.level.padEnd(5)}
+        <div
+          ref={containerRef}
+          className="h-full overflow-y-auto bg-[#0c0c0e] font-[var(--font-mono)] text-xs leading-6"
+        >
+          {isLoading && (
+            <div className="flex items-center justify-center h-full text-[var(--text-muted)]">
+              Loading logs...
+            </div>
+          )}
+
+          {!isLoading && filtered.map((log) => (
+            <div
+              key={log.id}
+              className={cn(
+                'flex px-4 hover:bg-white/[0.03] transition-colors',
+                log.level === 'ERROR' && 'border-l-[3px] border-l-[var(--danger)] bg-[var(--danger-muted)]/30'
+              )}
+            >
+              {/* Line number */}
+              <span className="shrink-0 w-[40px] text-right pr-3 text-[var(--text-muted)]/40 select-none" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                {log.id + 1}
               </span>
-            )}
-            <span className="text-[var(--text-primary)] break-all">{log.message}</span>
-          </div>
-        ))}
+              {log.level && (
+                <span className={cn('shrink-0 w-[52px] font-semibold', levelColors[log.level])}>
+                  {log.level.padEnd(5)}
+                </span>
+              )}
+              <span className="text-[var(--text-primary)] break-all">{log.message}</span>
+            </div>
+          ))}
 
-        {!isLoading && filtered.length === 0 && (
-          <div className="flex items-center justify-center h-full text-[var(--text-muted)]">
-            No logs match the current filter
-          </div>
-        )}
+          {!isLoading && filtered.length === 0 && (
+            <div className="flex items-center justify-center h-full text-[var(--text-muted)]">
+              No logs match the current filter
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Status bar */}
