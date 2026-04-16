@@ -55,12 +55,13 @@ export default function ProviderCard({
     return (
       <div
         className={cn(
-          'rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-5 transition-colors hover:bg-[var(--bg-surface-2)]',
+          'bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-md)] p-4 transition-colors hover:bg-[var(--bg-surface-2)]',
+          configured && 'border-l-2 border-l-[var(--success)]',
         )}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-[var(--radius-md)] flex items-center justify-center text-sm font-semibold text-[var(--text-secondary)] bg-[var(--bg-surface-2)]">
+            <div className="w-9 h-9 rounded-[var(--radius-md)] flex items-center justify-center text-xs font-semibold text-[var(--text-secondary)] bg-[var(--bg-surface-2)]">
               {name.slice(0, 2).toUpperCase()}
             </div>
             <div>
@@ -86,7 +87,8 @@ export default function ProviderCard({
   return (
     <div
       className={cn(
-        'rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] transition-colors hover:bg-[var(--bg-surface-2)]',
+        'bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-md)] transition-colors hover:bg-[var(--bg-surface-2)]',
+        configured && 'border-l-2 border-l-[var(--success)]',
       )}
     >
       <div
@@ -99,15 +101,15 @@ export default function ProviderCard({
             setExpanded(!expanded)
           }
         }}
-        className="w-full flex items-center justify-between p-5 text-left rounded-[var(--radius-md)] cursor-pointer"
+        className="w-full flex items-center justify-between p-4 text-left rounded-[var(--radius-md)] cursor-pointer"
       >
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-[var(--radius-md)] flex items-center justify-center text-sm font-semibold text-[var(--text-secondary)] bg-[var(--bg-surface-2)]">
+          <div className="w-9 h-9 rounded-[var(--radius-md)] flex items-center justify-center text-xs font-semibold text-[var(--text-secondary)] bg-[var(--bg-surface-2)]">
             {name.slice(0, 2).toUpperCase()}
           </div>
           <div>
             <h3 className="text-sm font-medium text-[var(--text-primary)]">{name}</h3>
-            <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-2 mt-0.5">
               <Badge variant={configured ? 'success' : 'neutral'}>
                 {configured ? `${keys.length} key${keys.length > 1 ? 's' : ''}` : 'Not configured'}
               </Badge>
@@ -130,7 +132,7 @@ export default function ProviderCard({
       </div>
 
       {expanded && (
-        <div className="px-5 pb-5 border-t border-[var(--border-default)]">
+        <div className="px-4 pb-4 border-t border-[var(--border-default)]">
           {/* Existing keys */}
           {keys.length > 0 && (
             <div className="mt-3 space-y-2">

@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Zap } from 'lucide-react'
+import PageHeader from '../components/PageHeader'
 import SearchInput from '../components/SearchInput'
 import Badge from '../components/Badge'
 import { cn } from '../lib/utils'
@@ -36,6 +37,8 @@ export default function Skills() {
 
   return (
     <div className="space-y-6">
+      <PageHeader title="Skills" description="Agent capabilities and tools (read-only)" />
+
       {/* Toolbar */}
       <div className="flex items-center gap-3 flex-wrap">
         <SearchInput value={search} onChange={setSearch} placeholder="Search skills..." className="w-64" />
@@ -45,10 +48,10 @@ export default function Skills() {
               key={cat}
               onClick={() => setCategoryFilter(cat)}
               className={cn(
-                'px-2.5 py-1 text-xs rounded-full capitalize border transition-colors',
+                'px-2.5 py-1 text-xs rounded-full capitalize transition-colors',
                 categoryFilter === cat
-                  ? 'bg-[var(--accent)] text-white border-[var(--accent)]'
-                  : 'text-[var(--text-secondary)] border-[var(--border-default)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-2)] hover:text-[var(--text-primary)]'
+                  ? 'bg-[var(--accent)] text-white'
+                  : 'border border-[var(--border-default)] text-[var(--text-secondary)] hover:bg-[var(--bg-surface-2)] hover:text-[var(--text-primary)]'
               )}
             >
               {cat}
@@ -63,11 +66,11 @@ export default function Skills() {
           <div
             key={skill.name}
             className={cn(
-              'rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-5 transition-colors hover:bg-[var(--bg-surface-2)]',
+              'bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-md)] p-4 transition-colors hover:border-[var(--border-strong)]',
               !skill.enabled && 'opacity-60'
             )}
           >
-            <div className="flex items-start justify-between mb-3">
+            <div className="flex items-start justify-between mb-2">
               <div className="flex items-center gap-2">
                 <Zap size={16} className={skill.enabled ? 'text-[var(--accent)]' : 'text-[var(--text-tertiary)]'} />
                 <h3 className="text-sm font-semibold font-[var(--font-mono)] text-[var(--text-primary)]">{skill.name}</h3>

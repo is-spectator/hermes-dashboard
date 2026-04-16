@@ -1,12 +1,13 @@
 import { useMemo } from 'react'
 import { AlertCircle, WifiOff } from 'lucide-react'
+import PageHeader from '../components/PageHeader'
 import StatusBadge from '../components/StatusBadge'
 import Badge from '../components/Badge'
 import SkeletonLoader from '../components/SkeletonLoader'
 import { cn } from '../lib/utils'
 import { useStatus } from '../api/hooks'
 
-/** Known platform icons (lowercase key -> emoji/symbol). Extend as needed. */
+/** Known platform icons (lowercase key -> letter). Extend as needed. */
 const PLATFORM_ICONS: Record<string, string> = {
   discord: 'D',
   slack: 'S',
@@ -38,8 +39,10 @@ function PlatformIcon({ name, connected }: { name: string; connected: boolean })
 function GatewaysSkeleton() {
   return (
     <div className="space-y-6">
+      <PageHeader title="Gateways" description="Message platform connection status" />
+
       {/* Master status skeleton */}
-      <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-5">
+      <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-md)] p-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <SkeletonLoader className="w-2.5 h-2.5 rounded-full" />
@@ -60,7 +63,7 @@ function GatewaysSkeleton() {
         {Array.from({ length: 3 }).map((_, i) => (
           <div
             key={i}
-            className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-5"
+            className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-md)] p-5"
           >
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
@@ -121,6 +124,7 @@ export default function Gateways() {
   if (error) {
     return (
       <div className="space-y-6">
+        <PageHeader title="Gateways" description="Message platform connection status" />
         <div className="rounded-[var(--radius-md)] border border-[var(--danger)]/20 bg-[var(--danger-soft)] p-8 text-center">
           <AlertCircle size={36} className="mx-auto text-[var(--danger)] mb-4 opacity-80" />
           <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">
@@ -137,8 +141,10 @@ export default function Gateways() {
 
   return (
     <div className="space-y-6">
-      {/* Gateway master status */}
-      <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-5">
+      <PageHeader title="Gateways" description="Message platform connection status" />
+
+      {/* Gateway process status panel */}
+      <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-md)] p-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <StatusBadge status={status?.gateway_running ? 'online' : 'offline'} size="md" />
@@ -177,7 +183,8 @@ export default function Gateways() {
               <div
                 key={gw.name}
                 className={cn(
-                  'rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-5 transition-colors hover:bg-[var(--bg-surface-2)]',
+                  'bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-md)] p-5 transition-colors hover:bg-[var(--bg-surface-2)]',
+                  gw.connected && 'border-l-2 border-l-[var(--success)]',
                   !gw.connected && 'opacity-60'
                 )}
               >
@@ -186,23 +193,16 @@ export default function Gateways() {
                     <PlatformIcon name={gw.name} connected={gw.connected} />
                     <div>
                       <h3 className="text-sm font-medium text-[var(--text-primary)] capitalize">{gw.name}</h3>
-                      <span className="text-xs text-[var(--text-tertiary)]">{gw.platform}</span>
+                      <StatusBadge status={gw.connected ? 'online' : 'offline'} showLabel />
                     </div>
                   </div>
-                  <StatusBadge status={gw.connected ? 'online' : 'offline'} showLabel />
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-[var(--text-tertiary)]">Status</span>
-                    <Badge variant={gw.connected ? 'success' : 'danger'}>
-                      {gw.connected ? 'Connected' : 'Disconnected'}
-                    </Badge>
-                  </div>
                   {gw.last_active && (
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-[var(--text-tertiary)]">Last Active</span>
-                      <span className="text-[var(--text-secondary)]">{gw.last_active}</span>
+                      <span className="text-[var(--text-tertiary)]">Last active</span>
+                      <Badge variant="neutral">{gw.last_active}</Badge>
                     </div>
                   )}
                 </div>
@@ -218,8 +218,8 @@ export default function Gateways() {
           </div>
         </>
       ) : (
-        /* Empty state — no platforms at all */
-        <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-8 text-center">
+        /* Empty state -- no platforms at all */
+        <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-md)] p-8 text-center">
           <WifiOff size={36} className="mx-auto text-[var(--text-tertiary)] mb-4" />
           <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">
             No gateway platforms configured

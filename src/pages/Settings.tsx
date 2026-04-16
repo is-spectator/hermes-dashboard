@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Sun, Moon, ExternalLink, RefreshCw, CheckCircle, XCircle } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
+import PageHeader from '../components/PageHeader'
 import Button from '../components/Button'
 import { useAppStore } from '../stores/useAppStore'
 import { cn } from '../lib/utils'
@@ -28,7 +29,7 @@ export default function Settings() {
     setConnectionError(null)
 
     try {
-      // Test the NEW url directly — do NOT persist until confirmed
+      // Test the NEW url directly -- do NOT persist until confirmed
       const testRes = await fetch(`${apiUrl}/api/status`, {
         signal: AbortSignal.timeout(5000),
       })
@@ -38,7 +39,7 @@ export default function Settings() {
       const data = await testRes.json()
       if (!data.version) throw new Error('Invalid response')
 
-      // SUCCESS — now persist
+      // SUCCESS -- now persist
       setHermesApiUrl(apiUrl)
       clearToken()
       queryClient.clear()
@@ -56,31 +57,31 @@ export default function Settings() {
 
   return (
     <div className="max-w-2xl space-y-8">
+      <PageHeader title="Settings" description="Dashboard configuration" />
+
       {/* Appearance */}
       <section>
         <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">Appearance</h2>
         <p className="text-xs text-[var(--text-tertiary)] mb-4">Customize how Hermes Dashboard looks.</p>
 
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs text-[var(--text-secondary)] mb-2">Theme</label>
-            <div className="flex gap-3">
-              {(['dark', 'light'] as const).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setTheme(t)}
-                  className={cn(
-                    'flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-md)] text-sm border transition-colors',
-                    theme === t
-                      ? 'bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent)]'
-                      : 'text-[var(--text-secondary)] border-[var(--border-default)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-2)]'
-                  )}
-                >
-                  {t === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
-                  <span className="capitalize">{t}</span>
-                </button>
-              ))}
-            </div>
+        <div>
+          <label className="block text-xs text-[var(--text-secondary)] mb-2">Theme</label>
+          <div className="flex gap-3">
+            {(['dark', 'light'] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTheme(t)}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-md)] text-sm border transition-colors',
+                  theme === t
+                    ? 'bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent)]'
+                    : 'text-[var(--text-secondary)] border-[var(--border-default)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-2)]'
+                )}
+              >
+                {t === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
+                <span className="capitalize">{t}</span>
+              </button>
+            ))}
           </div>
         </div>
       </section>
@@ -90,41 +91,39 @@ export default function Settings() {
         <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">Connection</h2>
         <p className="text-xs text-[var(--text-tertiary)] mb-4">Configure the Hermes Agent backend connection.</p>
 
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs text-[var(--text-secondary)] mb-1.5">Hermes Agent API URL</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={apiUrl}
-                onChange={(e) => setApiUrl(e.target.value)}
-                placeholder="http://127.0.0.1:9119"
-                className="flex-1 h-8 px-3 rounded-[var(--radius-md)] text-sm font-[var(--font-mono)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] bg-[var(--bg-surface-2)] border border-[var(--border-default)] focus:border-[var(--border-focus)] focus:outline-none focus:ring-1 focus:ring-[var(--border-focus)]/20 transition-colors"
-              />
-              <Button onClick={saveConnection} disabled={connectionState === 'testing'}>
-                {connectionState === 'testing' ? (
-                  <><RefreshCw size={14} className="animate-spin" /> Testing...</>
-                ) : (
-                  'Save'
-                )}
-              </Button>
-            </div>
-            <p className="mt-1.5 text-[10px] text-[var(--text-tertiary)]">
-              The URL where your Hermes Agent Dashboard API is running.
-            </p>
-            {connectionState === 'connected' && connectedVersion && (
-              <div className="mt-2 flex items-center gap-1.5 text-xs text-[var(--success)]">
-                <CheckCircle size={14} />
-                <span>Connected — Hermes v{connectedVersion}</span>
-              </div>
-            )}
-            {connectionState === 'failed' && connectionError && (
-              <div className="mt-2 flex items-center gap-1.5 text-xs text-[var(--danger)]">
-                <XCircle size={14} />
-                <span>{connectionError}</span>
-              </div>
-            )}
+        <div>
+          <label className="block text-xs text-[var(--text-secondary)] mb-1.5">Hermes Agent API URL</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={apiUrl}
+              onChange={(e) => setApiUrl(e.target.value)}
+              placeholder="http://127.0.0.1:9119"
+              className="flex-1 h-8 px-3 rounded-[var(--radius-md)] text-sm font-[var(--font-mono)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] bg-[var(--bg-surface-2)] border border-[var(--border-default)] focus:border-[var(--border-focus)] focus:outline-none focus:ring-1 focus:ring-[var(--border-focus)]/20 transition-colors"
+            />
+            <Button onClick={saveConnection} disabled={connectionState === 'testing'}>
+              {connectionState === 'testing' ? (
+                <><RefreshCw size={14} className="animate-spin" /> Testing...</>
+              ) : (
+                'Save'
+              )}
+            </Button>
           </div>
+          <p className="mt-1.5 text-[10px] text-[var(--text-tertiary)]">
+            The URL where your Hermes Agent Dashboard API is running.
+          </p>
+          {connectionState === 'connected' && connectedVersion && (
+            <div className="mt-2 flex items-center gap-1.5 text-xs text-[var(--success)]">
+              <CheckCircle size={14} />
+              <span>Connected — Hermes v{connectedVersion}</span>
+            </div>
+          )}
+          {connectionState === 'failed' && connectionError && (
+            <div className="mt-2 flex items-center gap-1.5 text-xs text-[var(--danger)]">
+              <XCircle size={14} />
+              <span>{connectionError}</span>
+            </div>
+          )}
         </div>
       </section>
 
@@ -134,7 +133,7 @@ export default function Settings() {
           <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">Agent Info</h2>
           <p className="text-xs text-[var(--text-tertiary)] mb-4">Live information from the connected Hermes Agent.</p>
 
-          <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] divide-y divide-[var(--border-default)] overflow-hidden">
+          <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-md)] divide-y divide-[var(--border-default)] overflow-hidden">
             {[
               ['Agent Version', status.version],
               ['Release Date', status.release_date],
@@ -172,20 +171,15 @@ export default function Settings() {
         <p className="text-xs text-[var(--text-tertiary)] mb-4">Raw configuration from the Hermes Agent. Edit via the config file directly.</p>
 
         {config ? (
-          <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-muted)] overflow-auto max-h-[400px]">
-            <div className="px-4 py-3">
-              <pre className="text-xs font-[var(--font-mono)] text-[var(--text-primary)] whitespace-pre-wrap leading-6">
-                {JSON.stringify(config, null, 2).split('\n').map((line, i) => (
-                  <div
-                    key={i}
-                    className="flex hover:bg-[var(--bg-surface-2)] transition-colors"
-                  >
-                    <span className="inline-block w-[36px] text-right pr-3 select-none shrink-0 text-[var(--text-tertiary)]" style={{ fontVariantNumeric: 'tabular-nums' }}>{i + 1}</span>
-                    <span>{line}</span>
-                  </div>
-                ))}
-              </pre>
-            </div>
+          <div className="bg-[var(--bg-muted)] border border-[var(--border-default)] rounded-[var(--radius-md)] p-4 overflow-auto max-h-[400px]">
+            <pre className="text-[13px] font-[var(--font-mono)] text-[var(--text-primary)] whitespace-pre-wrap leading-6">
+              {JSON.stringify(config, null, 2).split('\n').map((line, i) => (
+                <div key={i} className="flex">
+                  <span className="inline-block w-9 text-right pr-3 select-none shrink-0 text-[var(--text-tertiary)] tabular-nums">{i + 1}</span>
+                  <span>{line}</span>
+                </div>
+              ))}
+            </pre>
           </div>
         ) : (
           <div className="text-sm text-[var(--text-tertiary)]">
@@ -199,7 +193,7 @@ export default function Settings() {
         <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">About</h2>
         <p className="text-xs text-[var(--text-tertiary)] mb-4">Hermes Dashboard v0.1.0</p>
 
-        <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] divide-y divide-[var(--border-default)] overflow-hidden">
+        <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-md)] divide-y divide-[var(--border-default)] overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3">
             <span className="text-sm text-[var(--text-secondary)]">Dashboard Version</span>
             <span className="text-sm font-[var(--font-mono)] text-[var(--text-primary)]">0.1.0</span>

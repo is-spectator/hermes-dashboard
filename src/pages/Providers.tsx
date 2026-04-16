@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react'
 import { AlertCircle } from 'lucide-react'
+import PageHeader from '../components/PageHeader'
 import SearchInput from '../components/SearchInput'
 import ProviderCard from '../components/ProviderCard'
 import { useEnv, useUpdateEnv, useDeleteEnvKey } from '../api/hooks'
@@ -127,6 +128,7 @@ export default function Providers() {
   if (error) {
     return (
       <div className="space-y-6">
+        <PageHeader title="Providers" description="Manage API keys and service connections" />
         <div className="rounded-[var(--radius-md)] border border-[var(--danger)]/20 bg-[var(--danger-soft)] p-8 text-center">
           <AlertCircle size={36} className="mx-auto text-[var(--danger)] mb-4 opacity-80" />
           <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">
@@ -142,7 +144,9 @@ export default function Providers() {
 
   return (
     <div className="space-y-6">
-      {/* Toolbar */}
+      <PageHeader title="Providers" description="Manage API keys and service connections" />
+
+      {/* Filter bar */}
       <div className="flex items-center gap-3 flex-wrap">
         <SearchInput
           value={search}
