@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
 
 interface SideDrawerProps {
@@ -10,6 +10,8 @@ interface SideDrawerProps {
 }
 
 export default function SideDrawer({ open, onClose, title, children, width = '480px' }: SideDrawerProps) {
+  const drawerRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     if (!open) return
     const handler = (e: KeyboardEvent) => {
@@ -18,6 +20,20 @@ export default function SideDrawer({ open, onClose, title, children, width = '48
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
   }, [open, onClose])
+
+  // Focus trap: focus first focusable element on open, return focus on close
+  useEffect(() => {
+    if (!open) return
+    const trigger = document.activeElement as HTMLElement
+    const focusable = drawerRef.current?.querySelector<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    )
+    focusable?.focus()
+
+    return () => {
+      trigger?.focus()
+    }
+  }, [open])
 
   if (!open) return null
 
@@ -36,6 +52,7 @@ export default function SideDrawer({ open, onClose, title, children, width = '48
       />
       {/* Drawer panel -- glass */}
       <div
+        ref={drawerRef}
         role="dialog"
         aria-modal="true"
         aria-label={title || 'Side drawer'}

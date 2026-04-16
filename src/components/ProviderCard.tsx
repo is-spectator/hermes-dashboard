@@ -128,9 +128,17 @@ export default function ProviderCard({
         if (!configured) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
       }}
     >
-      <button
+      <div
+        role="button"
+        tabIndex={0}
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between p-5 text-left hover:bg-white/[0.02] rounded-[var(--radius-lg)] transition-colors"
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            setExpanded(!expanded)
+          }
+        }}
+        className="w-full flex items-center justify-between p-5 text-left hover:bg-white/[0.02] rounded-[var(--radius-lg)] transition-colors cursor-pointer"
       >
         <div className="flex items-center gap-3">
           <div
@@ -164,7 +172,7 @@ export default function ProviderCard({
           </div>
         </div>
         {expanded ? <ChevronUp size={16} className="text-[var(--text-muted)]" /> : <ChevronDown size={16} className="text-[var(--text-muted)]" />}
-      </button>
+      </div>
 
       {expanded && (
         <div className="px-5 pb-5 border-t border-[rgba(255,255,255,0.06)]">
