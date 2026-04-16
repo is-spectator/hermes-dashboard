@@ -177,8 +177,9 @@ export const api = {
   getSkills: () => request<Skill[]>('/api/skills'),
 
   // Logs — returns { file, lines }
-  getLogs: (params?: { level?: string; search?: string; limit?: number }) => {
+  getLogs: (params?: { file?: string; level?: string; search?: string; limit?: number }) => {
     const qs = new URLSearchParams()
+    if (params?.file) qs.set('file', params.file)
     if (params?.level) qs.set('level', params.level)
     if (params?.search) qs.set('search', params.search)
     if (params?.limit) qs.set('limit', String(params.limit))

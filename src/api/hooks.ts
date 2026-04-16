@@ -74,7 +74,7 @@ export function useSkills() {
 }
 
 // Logs
-export function useLogs(params?: { level?: string; search?: string; limit?: number }) {
+export function useLogs(params?: { file?: string; level?: string; search?: string; limit?: number }) {
   return useQuery({
     queryKey: ['logs', params],
     queryFn: () => api.getLogs(params),

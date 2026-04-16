@@ -1,19 +1,22 @@
-import { useState, useRef, useEffect, useMemo } from 'react'
-import { ArrowDown } from 'lucide-react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
+import { ArrowDown, AlertTriangle } from 'lucide-react'
 import SearchInput from '../components/SearchInput'
 import { cn } from '../lib/utils'
 import { useLogs } from '../api/hooks'
 
 type LogLevel = 'DEBUG' | 'INFO' | 'WARN' | 'ERROR'
+type LogFile = 'agent' | 'gateway'
 
 interface ParsedLogLine {
   id: number
   raw: string
   level: LogLevel | null
-  timestamp: string | null
+  time: string | null
   module: string | null
   message: string
 }
+
+const MAX_DISPLAY_LINES = 500
 
 const levelColors: Record<LogLevel, string> = {
   DEBUG: 'text-[var(--text-muted)]',
@@ -22,33 +25,71 @@ const levelColors: Record<LogLevel, string> = {
   ERROR: 'text-[#f87171]',
 }
 
+// Regex for structured log lines:
+//   2026-04-16 10:30:00 INFO [module] message
+//   2026-04-16T10:30:00.123Z [INFO] [module] message
+// Also handles: just a level keyword somewhere in plain text
+const STRUCTURED_RE =
+  /^(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:[.,]\d+)?(?:Z|[+-]\d{2}:?\d{2})?)\s+\[?(\w+)\]?\s+\[([^\]]+)\]\s*(.*)/
+
+const LEVEL_RE = /\b(DEBUG|INFO|WARN(?:ING)?|ERROR)\b/i
+
+/** Extract HH:MM:SS from an ISO-ish timestamp string */
+function extractTime(ts: string): string {
+  const m = ts.match(/(\d{2}:\d{2}:\d{2})/)
+  return m ? m[1] : ts
+}
+
+/** Normalize a level string to our canonical LogLevel */
+function normalizeLevel(raw: string): LogLevel | null {
+  const upper = raw.toUpperCase()
+  if (upper === 'DEBUG') return 'DEBUG'
+  if (upper === 'INFO') return 'INFO'
+  if (upper === 'WARN' || upper === 'WARNING') return 'WARN'
+  if (upper === 'ERROR') return 'ERROR'
+  return null
+}
+
 /** Parse a raw log line into structured fields.
- *  Lines may be structured like: "2026-04-16 09:30:00 [INFO] [module] message"
- *  or they may just be plain text. We do best-effort parsing.
+ *  Tries the structured format first, then falls back to best-effort.
  */
 function parseLogLine(raw: string, id: number): ParsedLogLine {
   const trimmed = raw.replace(/\n$/, '')
 
-  // Try to extract level
-  let level: LogLevel | null = null
-  if (/\bDEBUG\b/i.test(trimmed)) level = 'DEBUG'
-  else if (/\bERROR\b/i.test(trimmed)) level = 'ERROR'
-  else if (/\bWARN(ING)?\b/i.test(trimmed)) level = 'WARN'
-  else if (/\bINFO\b/i.test(trimmed)) level = 'INFO'
+  // Try structured format: "timestamp LEVEL [module] message"
+  const structured = STRUCTURED_RE.exec(trimmed)
+  if (structured) {
+    const [, ts, levelStr, mod, msg] = structured
+    return {
+      id,
+      raw: trimmed,
+      level: normalizeLevel(levelStr),
+      time: extractTime(ts),
+      module: mod,
+      message: msg,
+    }
+  }
 
-  // Try to extract timestamp (ISO or common formats)
+  // Fallback: extract level keyword anywhere in line
+  let level: LogLevel | null = null
+  const levelMatch = LEVEL_RE.exec(trimmed)
+  if (levelMatch) {
+    level = normalizeLevel(levelMatch[1])
+  }
+
+  // Try to extract a leading timestamp
   const tsMatch = trimmed.match(/^(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}[^ ]*)/)
-  const timestamp = tsMatch ? tsMatch[1] : null
+  const time = tsMatch ? extractTime(tsMatch[1]) : null
 
   // Try to extract module in brackets like [gateway.telegram]
-  const moduleMatch = trimmed.match(/\[([a-zA-Z0-9_.]+)\]/)
+  const moduleMatch = trimmed.match(/\[([a-zA-Z][a-zA-Z0-9_.]+)\]/)
   const module = moduleMatch ? moduleMatch[1] : null
 
   return {
     id,
     raw: trimmed,
     level,
-    timestamp,
+    time,
     module,
     message: trimmed,
   }
@@ -58,16 +99,23 @@ export default function Logs() {
   const [search, setSearch] = useState('')
   const [activeLevels, setActiveLevels] = useState<Set<LogLevel | 'ALL'>>(new Set(['ALL']))
   const [autoScroll, setAutoScroll] = useState(true)
+  const [logFile, setLogFile] = useState<LogFile>('agent')
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const { data: logsData, isLoading } = useLogs()
+  const { data: logsData, isLoading, isError, error } = useLogs({ file: logFile })
 
   const parsedLogs = useMemo(() => {
     if (!logsData?.lines) return []
-    return logsData.lines.map((line, i) => parseLogLine(line, i))
+    const lines = logsData.lines
+    // Take only the last MAX_DISPLAY_LINES lines for performance
+    const sliced = lines.length > MAX_DISPLAY_LINES
+      ? lines.slice(-MAX_DISPLAY_LINES)
+      : lines
+    const offset = lines.length - sliced.length
+    return sliced.map((line, i) => parseLogLine(line, offset + i))
   }, [logsData])
 
-  const toggleLevel = (level: LogLevel | 'ALL') => {
+  const toggleLevel = useCallback((level: LogLevel | 'ALL') => {
     setActiveLevels((prev) => {
       if (level === 'ALL') {
         return new Set(['ALL'])
@@ -82,14 +130,15 @@ export default function Logs() {
       }
       return next
     })
-  }
+  }, [])
 
   const filtered = useMemo(() => {
+    const lowerSearch = search.toLowerCase()
     return parsedLogs.filter((log) => {
       // Level filter
       if (!activeLevels.has('ALL') && log.level && !activeLevels.has(log.level)) return false
       // Search filter
-      if (search && !log.message.toLowerCase().includes(search.toLowerCase())) return false
+      if (search && !log.message.toLowerCase().includes(lowerSearch)) return false
       return true
     })
   }, [parsedLogs, search, activeLevels])
@@ -116,10 +165,48 @@ export default function Logs() {
     return { background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', color: '#38bdf8' }
   }
 
+  const fileBtnStyle = (file: LogFile) => {
+    const active = logFile === file
+    if (!active) {
+      return {
+        background: 'transparent',
+        border: '1px solid rgba(255,255,255,0.06)',
+        color: 'var(--text-muted)',
+        opacity: 0.6,
+      }
+    }
+    return {
+      background: 'rgba(139,92,246,0.1)',
+      border: '1px solid rgba(139,92,246,0.25)',
+      color: '#a78bfa',
+    }
+  }
+
+  const totalLines = logsData?.lines?.length ?? 0
+  const isCapped = totalLines > MAX_DISPLAY_LINES
+
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)]">
       {/* Toolbar */}
       <div className="flex items-center gap-3 mb-4 flex-wrap">
+        {/* File selector */}
+        <div className="flex items-center gap-1.5">
+          {(['agent', 'gateway'] as LogFile[]).map((file) => (
+            <button
+              key={file}
+              onClick={() => setLogFile(file)}
+              className="px-2.5 py-1 text-xs font-medium rounded-[var(--radius-sm)] transition-all duration-200 capitalize"
+              style={fileBtnStyle(file)}
+            >
+              {file}
+            </button>
+          ))}
+        </div>
+
+        {/* Separator */}
+        <div className="w-px h-5 bg-white/10" />
+
+        {/* Level filters */}
         <div className="flex items-center gap-1.5">
           {(['ALL', 'DEBUG', 'INFO', 'WARN', 'ERROR'] as (LogLevel | 'ALL')[]).map((level) => (
             <button
@@ -177,7 +264,17 @@ export default function Logs() {
             </div>
           )}
 
-          {!isLoading && filtered.map((log) => (
+          {!isLoading && isError && (
+            <div className="flex flex-col items-center justify-center h-full gap-3 text-[var(--text-muted)]">
+              <AlertTriangle size={24} className="text-[#f87171]" />
+              <span className="text-sm text-[#f87171]">Failed to load logs</span>
+              <span className="text-xs max-w-md text-center">
+                {error instanceof Error ? error.message : 'Could not connect to the Hermes Agent API. Check that the agent is running.'}
+              </span>
+            </div>
+          )}
+
+          {!isLoading && !isError && filtered.map((log) => (
             <div
               key={log.id}
               className={cn(
@@ -199,16 +296,35 @@ export default function Logs() {
               <span className="shrink-0 w-[40px] text-right pr-3 select-none" style={{ fontVariantNumeric: 'tabular-nums', color: 'rgba(255,255,255,0.15)' }}>
                 {log.id + 1}
               </span>
-              {log.level && (
-                <span className={cn('shrink-0 w-[52px] font-semibold', levelColors[log.level])}>
-                  {log.level.padEnd(5)}
+              {/* Formatted: [HH:MM:SS] [LEVEL] [module] message */}
+              {log.time && (
+                <span className="shrink-0 text-[var(--text-muted)] mr-2" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                  [{log.time}]
                 </span>
               )}
-              <span className="text-[var(--text-primary)] break-all">{log.message}</span>
+              {log.level && (
+                <span className={cn('shrink-0 w-[60px] font-semibold', levelColors[log.level])}>
+                  [{log.level}]
+                </span>
+              )}
+              {log.module && (
+                <span className="shrink-0 text-[var(--text-muted)] mr-2">
+                  [{log.module}]
+                </span>
+              )}
+              <span className="text-[var(--text-primary)] break-all">
+                {log.time || log.level || log.module
+                  ? log.message.replace(
+                      // Strip the already-displayed structured prefix from the message
+                      /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}[^ ]*\s+\[?\w+\]?\s+\[[^\]]+\]\s*/,
+                      '',
+                    ) || log.message
+                  : log.message}
+              </span>
             </div>
           ))}
 
-          {!isLoading && filtered.length === 0 && (
+          {!isLoading && !isError && filtered.length === 0 && (
             <div className="flex items-center justify-center h-full text-[var(--text-muted)]">
               No logs match the current filter
             </div>
@@ -218,8 +334,15 @@ export default function Logs() {
 
       {/* Status bar */}
       <div className="mt-2 flex items-center justify-between text-[10px] text-[var(--text-muted)]">
-        <span>{filtered.length} entries shown</span>
-        <span>Total: {parsedLogs.length} entries{logsData?.file ? ` (${logsData.file})` : ''}</span>
+        <span>
+          {filtered.length} entries shown
+          {isCapped && ` (capped at ${MAX_DISPLAY_LINES})`}
+        </span>
+        <span>
+          Total: {totalLines} lines
+          {' | '}
+          File: {logFile}
+        </span>
       </div>
     </div>
   )
