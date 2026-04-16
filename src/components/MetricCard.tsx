@@ -46,35 +46,64 @@ export default function MetricCard({ title, value, icon, subtitle, loading = fal
 
   if (loading) {
     return (
-      <div className="relative rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] p-5 overflow-hidden">
+      <div
+        className="relative rounded-[var(--radius-lg)] p-5 overflow-hidden"
+        style={{
+          background: 'rgba(255,255,255,0.03)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          border: '1px solid rgba(255,255,255,0.08)',
+        }}
+      >
         {/* Shimmer top bar */}
-        <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-[var(--border-default)] to-transparent animate-[shimmer_1.5s_linear_infinite] bg-[length:200%_100%]" />
-        <div className="h-4 w-20 rounded bg-[var(--bg-tertiary)] animate-[shimmer_1.5s_linear_infinite] bg-[length:200%_100%] bg-gradient-to-r from-[var(--bg-tertiary)] via-[var(--border-default)]/50 to-[var(--bg-tertiary)]" />
-        <div className="mt-3 h-8 w-16 rounded bg-[var(--bg-tertiary)] animate-[shimmer_1.5s_linear_infinite] bg-[length:200%_100%] bg-gradient-to-r from-[var(--bg-tertiary)] via-[var(--border-default)]/50 to-[var(--bg-tertiary)]" />
+        <div className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--accent)]/20 to-transparent animate-[shimmer_1.5s_linear_infinite] bg-[length:200%_100%]" />
+        <div className="h-3 w-20 rounded bg-white/[0.06] animate-[shimmer_1.5s_linear_infinite] bg-[length:200%_100%] bg-gradient-to-r from-white/[0.04] via-white/[0.08] to-white/[0.04]" />
+        <div className="mt-4 h-8 w-16 rounded bg-white/[0.06] animate-[shimmer_1.5s_linear_infinite] bg-[length:200%_100%] bg-gradient-to-r from-white/[0.04] via-white/[0.08] to-white/[0.04]" />
       </div>
     )
   }
 
   return (
-    <div className={cn(
-      'group relative rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] p-5 overflow-hidden',
-      'transition-all duration-200 hover:shadow-[var(--card-hover-shadow)]'
-    )}
-    style={{ boxShadow: 'var(--inner-glow)' }}
+    <div
+      className={cn(
+        'group relative rounded-[var(--radius-lg)] p-5 overflow-hidden',
+        'transition-all duration-300'
+      )}
+      style={{
+        background: 'rgba(255,255,255,0.03)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        boxShadow: 'var(--inner-glow)',
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = 'rgba(56,189,248,0.2)'
+        e.currentTarget.style.boxShadow = '0 0 20px rgba(56,189,248,0.12), 0 8px 24px rgba(0,0,0,0.3), var(--inner-glow)'
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
+        e.currentTarget.style.boxShadow = 'var(--inner-glow)'
+      }}
     >
-      {/* Gradient top border */}
-      <div className="absolute inset-x-0 top-0 h-[2px]" style={{
-        background: 'linear-gradient(90deg, var(--accent), var(--accent) 40%, transparent 100%)',
-        opacity: 0.6,
+      {/* Gradient top border -- thin neon accent line */}
+      <div className="absolute inset-x-0 top-0 h-[1px]" style={{
+        background: 'linear-gradient(90deg, var(--accent), rgba(56,189,248,0.3) 60%, transparent 100%)',
+        opacity: 0.5,
       }} />
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+        <span className="text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--text-muted)]">
           {title}
         </span>
-        {icon && <span className="text-[var(--text-muted)]">{icon}</span>}
+        {icon && <span className="text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors duration-200">{icon}</span>}
       </div>
       <div className="mt-2">
-        <span className="text-[1.75rem] font-semibold font-[var(--font-mono)] text-[var(--text-primary)] leading-none" style={{ fontVariantNumeric: 'tabular-nums' }}>
+        <span
+          className="text-[2rem] font-semibold font-[var(--font-mono)] text-[var(--text-primary)] leading-none"
+          style={{
+            fontVariantNumeric: 'tabular-nums',
+            textShadow: 'var(--text-glow-accent)',
+          }}
+        >
           {numericValue !== null ? displayed : value}
         </span>
       </div>

@@ -4,20 +4,20 @@ type Status = 'online' | 'degraded' | 'offline' | 'unknown'
 
 const config: Record<Status, { color: string; glowColor: string; pulse: boolean; label: string }> = {
   online: {
-    color: 'bg-[var(--success)]',
-    glowColor: 'shadow-[0_0_6px_var(--success)]',
+    color: 'bg-[#34d399]',
+    glowColor: '0 0 8px #34d399, 0 0 16px rgba(52,211,153,0.3)',
     pulse: true,
     label: 'Online',
   },
   degraded: {
-    color: 'bg-[var(--warning)]',
-    glowColor: 'shadow-[0_0_6px_var(--warning)]',
+    color: 'bg-[#fbbf24]',
+    glowColor: '0 0 8px #fbbf24, 0 0 16px rgba(251,191,36,0.3)',
     pulse: true,
     label: 'Degraded',
   },
   offline: {
-    color: 'bg-[var(--danger)]',
-    glowColor: '',
+    color: 'bg-[#f87171]',
+    glowColor: '0 0 6px rgba(248,113,113,0.4)',
     pulse: false,
     label: 'Offline',
   },
@@ -42,7 +42,7 @@ export default function StatusDot({ status, showLabel = false, size = 'sm' }: St
   return (
     <span className="inline-flex items-center gap-1.5">
       <span className="relative inline-flex">
-        {/* Pulse ring */}
+        {/* Outer pulse ring */}
         {pulse && (
           <span
             className={cn(
@@ -51,14 +51,14 @@ export default function StatusDot({ status, showLabel = false, size = 'sm' }: St
             )}
           />
         )}
-        {/* Dot */}
+        {/* Inner dot with neon glow */}
         <span
           className={cn(
             'relative rounded-full',
             dotSize,
-            color,
-            glowColor
+            color
           )}
+          style={{ boxShadow: glowColor || undefined }}
         />
       </span>
       {showLabel && (

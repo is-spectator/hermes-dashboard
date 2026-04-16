@@ -5,7 +5,6 @@ import MetricCard from '../components/MetricCard'
 import StatusDot from '../components/StatusDot'
 import Badge from '../components/Badge'
 import { useStatus, useSkills, useSessions, useEnv } from '../api/hooks'
-import { cn } from '../lib/utils'
 
 export default function Overview() {
   const navigate = useNavigate()
@@ -88,7 +87,7 @@ export default function Overview() {
       {/* Gateway Status Grid */}
       {gatewayPlatforms.length > 0 && (
         <section>
-          <h2 className="text-sm font-medium text-[var(--text-secondary)] mb-3">Gateway Platforms</h2>
+          <h2 className="text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--text-muted)] mb-3">Gateway Platforms</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {gatewayPlatforms
               .sort((a, b) => Number(b.connected) - Number(a.connected))
@@ -96,17 +95,32 @@ export default function Overview() {
                 <button
                   key={gw.name}
                   onClick={() => navigate('/gateways')}
-                  className={cn(
-                    'flex flex-col items-center gap-2 p-4 rounded-[var(--radius-lg)] border cursor-pointer transition-all duration-200',
-                    gw.connected
-                      ? 'border-[var(--success)]/30 bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] hover:scale-[1.02] animate-[border-breathe_3s_ease-in-out_infinite]'
-                      : 'border-[var(--border-default)] bg-[var(--bg-secondary)] opacity-50 hover:opacity-70 hover:scale-[1.02]'
-                  )}
+                  className="flex flex-col items-center gap-2 p-4 rounded-[var(--radius-lg)] cursor-pointer transition-all duration-200"
                   style={{
-                    animation: `fade-in-up 200ms ease-out ${i * 50}ms both${gw.connected ? ', border-breathe 3s ease-in-out infinite' : ''}`,
+                    background: 'rgba(255,255,255,0.03)',
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
+                    border: gw.connected
+                      ? '1px solid rgba(52,211,153,0.2)'
+                      : '1px solid rgba(255,255,255,0.06)',
+                    opacity: gw.connected ? 1 : 0.5,
+                    animation: `fade-in-up 200ms ease-out ${i * 50}ms both`,
+                    boxShadow: gw.connected ? '0 0 12px rgba(52,211,153,0.08)' : undefined,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.02)'
+                    e.currentTarget.style.boxShadow = gw.connected
+                      ? '0 0 20px rgba(52,211,153,0.15), 0 8px 20px rgba(0,0,0,0.3)'
+                      : '0 0 16px rgba(56,189,248,0.1), 0 8px 20px rgba(0,0,0,0.3)'
+                    e.currentTarget.style.opacity = '1'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)'
+                    e.currentTarget.style.boxShadow = gw.connected ? '0 0 12px rgba(52,211,153,0.08)' : ''
+                    e.currentTarget.style.opacity = gw.connected ? '1' : '0.5'
                   }}
                 >
-                  <Radio size={20} className={gw.connected ? 'text-[var(--success)]' : 'text-[var(--text-muted)]'} />
+                  <Radio size={20} className={gw.connected ? 'text-[#34d399]' : 'text-[var(--text-muted)]'} />
                   <span className="text-xs font-medium text-[var(--text-primary)] capitalize">{gw.name}</span>
                   <StatusDot status={gw.connected ? 'online' : 'offline'} />
                 </button>
@@ -116,7 +130,15 @@ export default function Overview() {
       )}
 
       {!status?.gateway_running && gatewayPlatforms.length === 0 && (
-        <section className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] p-5">
+        <section
+          className="rounded-[var(--radius-lg)] p-5"
+          style={{
+            background: 'rgba(255,255,255,0.03)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255,255,255,0.08)',
+          }}
+        >
           <div className="flex items-center gap-2 text-[var(--text-muted)]">
             <AlertCircle size={16} />
             <span className="text-sm">Gateway is not running. No platforms connected.</span>
@@ -127,24 +149,41 @@ export default function Overview() {
       {/* Bottom Split: Recent Sessions + Provider Health */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Sessions */}
-        <section className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)]">
-          <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--border-subtle)]">
+        <section
+          className="rounded-[var(--radius-lg)] overflow-hidden"
+          style={{
+            background: 'rgba(255,255,255,0.03)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255,255,255,0.08)',
+          }}
+        >
+          <div className="flex items-center justify-between px-5 py-3 border-b border-[rgba(255,255,255,0.06)]">
             <h2 className="text-sm font-medium text-[var(--text-primary)]">Recent Sessions</h2>
             <Activity size={14} className="text-[var(--text-muted)]" />
           </div>
-          <div className="divide-y divide-[var(--border-subtle)]">
+          <div className="divide-y divide-[rgba(255,255,255,0.04)]">
             {recentSessions.length === 0 && (
               <div className="px-5 py-6 text-center text-sm text-[var(--text-muted)]">No sessions yet</div>
             )}
             {recentSessions.map((session, i) => (
               <div
                 key={session.id}
-                className="group relative flex items-start gap-3 px-5 py-3 cursor-pointer hover:bg-[var(--bg-tertiary)] transition-colors"
+                className="group relative flex items-start gap-3 px-5 py-3 cursor-pointer transition-all duration-200"
                 style={{ animation: `fade-in-up 200ms ease-out ${i * 50}ms both` }}
                 onClick={() => navigate('/sessions')}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.03)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent'
+                }}
               >
                 {/* Hover accent bar */}
-                <span className="absolute left-0 top-0 bottom-0 w-0 group-hover:w-[3px] bg-[var(--accent)] transition-all duration-200 rounded-r" />
+                <span
+                  className="absolute left-0 top-0 bottom-0 w-0 group-hover:w-[3px] transition-all duration-200 rounded-r"
+                  style={{ background: 'var(--accent)', boxShadow: '2px 0 8px rgba(56,189,248,0.3)' }}
+                />
                 <span className="mt-0.5 text-[var(--text-muted)]">
                   {session.is_active ? <Clock size={14} /> : <MessageSquare size={14} />}
                 </span>
@@ -165,11 +204,19 @@ export default function Overview() {
         </section>
 
         {/* Provider Health Summary */}
-        <section className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)]">
-          <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--border-subtle)]">
+        <section
+          className="rounded-[var(--radius-lg)] overflow-hidden"
+          style={{
+            background: 'rgba(255,255,255,0.03)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255,255,255,0.08)',
+          }}
+        >
+          <div className="flex items-center justify-between px-5 py-3 border-b border-[rgba(255,255,255,0.06)]">
             <h2 className="text-sm font-medium text-[var(--text-primary)]">Provider Keys</h2>
           </div>
-          <div className="divide-y divide-[var(--border-subtle)]">
+          <div className="divide-y divide-[rgba(255,255,255,0.04)]">
             {providerEntries.length === 0 && (
               <div className="px-5 py-6 text-center text-sm text-[var(--text-muted)]">No provider keys found</div>
             )}

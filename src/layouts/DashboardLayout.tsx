@@ -47,21 +47,33 @@ function ConnectionStatus() {
     return () => clearInterval(interval)
   }, [])
 
-  const colors = {
-    connected: 'bg-[var(--success)]',
-    disconnected: 'bg-[var(--danger)]',
-    checking: 'bg-[var(--warning)]',
+  const glowColors = {
+    connected: '#34d399',
+    disconnected: '#f87171',
+    checking: '#fbbf24',
+  }
+
+  const bgColors = {
+    connected: 'bg-[#34d399]',
+    disconnected: 'bg-[#f87171]',
+    checking: 'bg-[#fbbf24]',
   }
 
   return (
-    <div className="flex items-center gap-2 text-xs text-[var(--text-secondary)]">
-      <span
-        className={cn(
-          'w-2 h-2 rounded-full',
-          colors[status],
-          status === 'connected' && 'animate-[pulse-slow_2s_ease-in-out_infinite]'
+    <div className="flex items-center gap-2.5 text-xs text-[var(--text-secondary)]">
+      <span className="relative inline-flex">
+        {/* Pulse ring */}
+        {status === 'connected' && (
+          <span
+            className={cn('absolute inset-0 rounded-full animate-[status-pulse_2s_ease-out_infinite]', bgColors[status])}
+          />
         )}
-      />
+        {/* Dot with glow */}
+        <span
+          className={cn('relative w-2 h-2 rounded-full', bgColors[status])}
+          style={{ boxShadow: `0 0 8px ${glowColors[status]}` }}
+        />
+      </span>
       <span className="hidden lg:inline">
         {status === 'connected' ? 'Hermes Connected' : status === 'checking' ? 'Checking...' : 'Disconnected'}
       </span>
@@ -78,32 +90,38 @@ export default function DashboardLayout() {
   }, [theme])
 
   return (
-    <div className="flex min-h-screen bg-[var(--bg-primary)]">
-      {/* Sidebar */}
+    <div className="flex min-h-screen">
+      {/* Sidebar -- Glass Panel */}
       <aside
-        className="fixed top-0 left-0 h-screen z-40 flex flex-col border-r border-[var(--border-default)] bg-[var(--bg-secondary)]"
+        className="fixed top-0 left-0 h-screen z-40 flex flex-col"
         style={{
           width: sidebarExpanded ? '220px' : '72px',
           transition: 'width 200ms ease-out',
+          background: 'rgba(255,255,255,0.02)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          borderRight: '1px solid rgba(255,255,255,0.06)',
         }}
       >
         {/* Logo */}
-        <div className="flex items-center h-14 px-4 border-b border-[var(--border-subtle)]">
+        <div className="flex items-center h-14 px-4 border-b border-[rgba(255,255,255,0.06)]">
           <div
             className="w-8 h-8 rounded-[var(--radius-md)] bg-[var(--accent)] flex items-center justify-center text-white font-bold text-sm font-[var(--font-mono)]"
-            style={{ boxShadow: 'var(--glow-accent)' }}
+            style={{
+              boxShadow: '0 0 16px rgba(56,189,248,0.4), 0 0 40px rgba(56,189,248,0.15), inset 0 1px 0 rgba(255,255,255,0.2)',
+            }}
           >
             H
           </div>
           {sidebarExpanded && (
-            <span className="ml-3 text-sm font-semibold text-[var(--text-primary)] whitespace-nowrap">
+            <span className="ml-3 text-sm font-semibold text-[var(--text-primary)] whitespace-nowrap tracking-wide">
               Hermes
             </span>
           )}
         </div>
 
         {/* Nav Items */}
-        <nav className="flex-1 py-2 overflow-y-auto">
+        <nav className="flex-1 py-3 overflow-y-auto">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path
             return (
@@ -114,27 +132,33 @@ export default function DashboardLayout() {
                   'group relative flex items-center gap-3 mx-2 my-0.5 px-3 h-9 rounded-[var(--radius-md)] text-sm transition-all duration-200',
                   isActive
                     ? 'text-[var(--accent)]'
-                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)]'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                 )}
                 style={isActive ? {
-                  background: 'linear-gradient(135deg, var(--accent-subtle), transparent 70%)',
+                  background: 'linear-gradient(135deg, rgba(56,189,248,0.1), transparent 70%)',
+                  boxShadow: 'inset 0 0 20px rgba(56,189,248,0.04)',
                 } : undefined}
               >
-                {/* Active accent bar */}
+                {/* Hover glass bg */}
+                {!isActive && (
+                  <span className="absolute inset-0 rounded-[var(--radius-md)] bg-white/0 group-hover:bg-white/[0.04] transition-colors duration-200" />
+                )}
+                {/* Active neon accent bar with glow */}
                 {isActive && (
                   <span
                     className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-[var(--accent)] animate-[slide-accent-in_200ms_ease-out]"
+                    style={{ boxShadow: '0 0 8px rgba(56,189,248,0.5), 2px 0 12px rgba(56,189,248,0.2)' }}
                   />
                 )}
                 <item.icon
                   size={18}
                   className={cn(
-                    'shrink-0 transition-transform duration-200',
+                    'relative shrink-0 transition-transform duration-200',
                     !sidebarExpanded && 'group-hover:scale-110'
                   )}
                 />
                 {sidebarExpanded && (
-                  <span className="whitespace-nowrap">{item.label}</span>
+                  <span className="relative whitespace-nowrap">{item.label}</span>
                 )}
               </NavLink>
             )
@@ -142,10 +166,10 @@ export default function DashboardLayout() {
         </nav>
 
         {/* Sidebar Footer */}
-        <div className="border-t border-[var(--border-subtle)] p-2">
+        <div className="border-t border-[rgba(255,255,255,0.06)] p-2">
           <button
             onClick={toggleSidebar}
-            className="flex items-center justify-center w-full h-8 rounded-[var(--radius-md)] text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)] transition-colors"
+            className="flex items-center justify-center w-full h-8 rounded-[var(--radius-md)] text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-white/[0.04] transition-colors"
           >
             {sidebarExpanded ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
           </button>
@@ -156,7 +180,7 @@ export default function DashboardLayout() {
                 href="https://github.com/is-spectator/hermes-dashboard"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[var(--text-muted)] hover:text-[var(--text-secondary)] transition-colors"
+                className="text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
               >
                 <ExternalLink size={14} />
               </a>
@@ -173,23 +197,31 @@ export default function DashboardLayout() {
           transition: 'margin-left 200ms ease-out',
         }}
       >
-        {/* Top Bar */}
-        <header className="sticky top-0 z-30 h-14 flex items-center justify-between px-6 bg-[var(--bg-primary)]/80 backdrop-blur-sm">
-          <h1 className="text-sm font-medium text-[var(--text-primary)]">
+        {/* Top Bar -- Glass with gradient fade */}
+        <header
+          className="sticky top-0 z-30 h-14 flex items-center justify-between px-6"
+          style={{
+            background: 'rgba(5,5,8,0.6)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+          }}
+        >
+          <h1 className="text-sm font-medium text-[var(--text-primary)] tracking-wide">
             {navItems.find((item) => item.path === location.pathname)?.label || 'Hermes Dashboard'}
           </h1>
           <div className="flex items-center gap-4">
             <ConnectionStatus />
             <button
               onClick={toggleTheme}
-              className="p-2 rounded-[var(--radius-md)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-tertiary)] transition-colors"
+              className="p-2 rounded-[var(--radius-md)] text-[var(--text-secondary)] hover:text-[var(--accent)] hover:bg-white/[0.04] transition-all duration-200"
               title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+              style={{ transition: 'all 200ms ease-out' }}
             >
               {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
             </button>
           </div>
-          {/* Subtle bottom gradient fade */}
-          <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-[var(--border-default)] to-transparent" />
+          {/* Bottom gradient fade line */}
+          <div className="absolute inset-x-0 bottom-0 h-[1px] bg-gradient-to-r from-transparent via-[rgba(56,189,248,0.15)] to-transparent" />
         </header>
 
         {/* Page Content */}

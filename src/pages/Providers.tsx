@@ -83,16 +83,24 @@ export default function Providers() {
           placeholder="Search providers..."
           className="w-64"
         />
-        <div className="flex rounded-[var(--radius-md)] border border-[var(--border-default)] overflow-hidden">
+        <div
+          className="flex rounded-[var(--radius-md)] overflow-hidden"
+          style={{
+            border: '1px solid rgba(255,255,255,0.08)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+          }}
+        >
           {filters.map((f) => (
             <button
               key={f.value}
               onClick={() => setFilter(f.value)}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+              className={`px-3 py-1.5 text-xs font-medium transition-all duration-200 ${
                 filter === f.value
                   ? 'bg-[var(--accent)] text-white'
-                  : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
+                  : 'text-[var(--text-secondary)] hover:bg-white/[0.04] hover:text-[var(--text-primary)]'
               }`}
+              style={filter === f.value ? { boxShadow: '0 0 12px rgba(56,189,248,0.2)' } : undefined}
             >
               {f.label}
             </button>
@@ -103,7 +111,7 @@ export default function Providers() {
       {/* API Key Providers */}
       {filteredProviders.length > 0 && (
         <section>
-          <h2 className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)] mb-3">
+          <h2 className="text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--text-muted)] mb-3">
             API Key Providers
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -124,7 +132,7 @@ export default function Providers() {
       {/* Other Environment Variables */}
       {filteredOther.length > 0 && (
         <section>
-          <h2 className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)] mb-3">
+          <h2 className="text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--text-muted)] mb-3">
             Other Environment Variables
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

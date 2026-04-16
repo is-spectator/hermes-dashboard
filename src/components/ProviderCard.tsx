@@ -32,19 +32,38 @@ export default function ProviderCard({
   const [expanded, setExpanded] = useState(false)
   const [newKey, setNewKey] = useState('')
 
+  const glassStyle = {
+    background: 'rgba(255,255,255,0.03)',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
+  }
+
   if (type === 'oauth') {
     return (
       <div
         className={cn(
-          'rounded-[var(--radius-lg)] border bg-[var(--bg-secondary)] p-5 transition-colors',
+          'rounded-[var(--radius-lg)] p-5 transition-all duration-200',
           authStatus === 'connected'
-            ? 'border-l-[3px] border-l-[var(--success)] border-r-[var(--border-default)] border-t-[var(--border-default)] border-b-[var(--border-default)]'
-            : 'border-[var(--border-default)]'
+            ? 'border-l-[3px] border-l-[#34d399]'
+            : ''
         )}
+        style={{
+          ...glassStyle,
+          border: authStatus === 'connected'
+            ? undefined
+            : '1px solid rgba(255,255,255,0.08)',
+          borderRight: '1px solid rgba(255,255,255,0.08)',
+          borderTop: '1px solid rgba(255,255,255,0.08)',
+          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          boxShadow: authStatus === 'connected' ? 'var(--glow-success)' : undefined,
+        }}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] flex items-center justify-center text-sm font-semibold text-[var(--text-secondary)]">
+            <div
+              className="w-10 h-10 rounded-[var(--radius-md)] flex items-center justify-center text-sm font-semibold text-[var(--text-secondary)]"
+              style={{ background: 'rgba(255,255,255,0.06)' }}
+            >
               {name.slice(0, 2).toUpperCase()}
             </div>
             <div>
@@ -70,19 +89,37 @@ export default function ProviderCard({
   return (
     <div
       className={cn(
-        'rounded-[var(--radius-lg)] border bg-[var(--bg-secondary)] transition-all duration-200 hover:translate-y-[-2px] hover:shadow-[var(--card-hover-shadow)]',
-        configured
-          ? 'border-l-[3px] border-l-[var(--success)] border-r-[var(--border-default)] border-t-[var(--border-default)] border-b-[var(--border-default)]'
-          : 'border-[var(--border-default)]'
+        'rounded-[var(--radius-lg)] transition-all duration-200 hover:translate-y-[-2px]',
+        configured ? 'border-l-[3px] border-l-[#34d399]' : ''
       )}
-      style={configured ? { boxShadow: 'var(--glow-success)' } : undefined}
+      style={{
+        ...glassStyle,
+        border: configured ? undefined : '1px solid rgba(255,255,255,0.08)',
+        borderRight: '1px solid rgba(255,255,255,0.08)',
+        borderTop: '1px solid rgba(255,255,255,0.08)',
+        borderBottom: '1px solid rgba(255,255,255,0.08)',
+        boxShadow: configured ? 'var(--glow-success)' : undefined,
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.boxShadow = configured
+          ? 'var(--glow-success), 0 8px 24px rgba(0,0,0,0.3)'
+          : '0 0 20px rgba(56,189,248,0.1), 0 8px 24px rgba(0,0,0,0.3)'
+        if (!configured) e.currentTarget.style.borderColor = 'rgba(56,189,248,0.15)'
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.boxShadow = configured ? 'var(--glow-success)' : ''
+        if (!configured) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
+      }}
     >
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between p-5 text-left hover:bg-[var(--bg-tertiary)] rounded-[var(--radius-lg)] transition-colors"
+        className="w-full flex items-center justify-between p-5 text-left hover:bg-white/[0.02] rounded-[var(--radius-lg)] transition-colors"
       >
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--bg-tertiary)] flex items-center justify-center text-sm font-semibold text-[var(--text-secondary)]">
+          <div
+            className="w-10 h-10 rounded-[var(--radius-md)] flex items-center justify-center text-sm font-semibold text-[var(--text-secondary)]"
+            style={{ background: 'rgba(255,255,255,0.06)' }}
+          >
             {name.slice(0, 2).toUpperCase()}
           </div>
           <div>
@@ -113,19 +150,23 @@ export default function ProviderCard({
       </button>
 
       {expanded && (
-        <div className="px-5 pb-5 border-t border-[var(--border-subtle)]">
+        <div className="px-5 pb-5 border-t border-[rgba(255,255,255,0.06)]">
           {/* Existing keys */}
           {keys.length > 0 && (
             <div className="mt-3 space-y-2">
               {keys.map((k) => (
-                <div key={k.name} className="flex items-center justify-between px-3 py-2 rounded-[var(--radius-md)] bg-[var(--bg-tertiary)]">
+                <div
+                  key={k.name}
+                  className="flex items-center justify-between px-3 py-2 rounded-[var(--radius-md)]"
+                  style={{ background: 'rgba(255,255,255,0.04)' }}
+                >
                   <div>
                     <span className="text-xs text-[var(--text-secondary)]">{k.name}</span>
                     <span className="ml-2 text-xs font-[var(--font-mono)] text-[var(--text-muted)]">{k.masked_value}</span>
                   </div>
                   <button
                     onClick={() => onRemoveKey?.(k.name)}
-                    className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--danger)] transition-colors"
+                    className="p-1 rounded text-[var(--text-muted)] hover:text-[#f87171] transition-colors"
                   >
                     <Trash2 size={14} />
                   </button>
@@ -141,7 +182,19 @@ export default function ProviderCard({
               placeholder="Enter API key..."
               value={newKey}
               onChange={(e) => setNewKey(e.target.value)}
-              className="flex-1 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-primary)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)]"
+              className="flex-1 h-8 px-3 rounded-[var(--radius-md)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none transition-all duration-200"
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(56,189,248,0.3)'
+                e.currentTarget.style.boxShadow = '0 0 8px rgba(56,189,248,0.1)'
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
+                e.currentTarget.style.boxShadow = 'none'
+              }}
             />
             <Button
               variant="primary"

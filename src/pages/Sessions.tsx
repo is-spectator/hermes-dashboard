@@ -119,16 +119,24 @@ export default function Sessions() {
       {/* Toolbar */}
       <div className="flex items-center gap-3 flex-wrap">
         <SearchInput value={search} onChange={setSearch} placeholder="Search sessions..." className="w-64" />
-        <div className="flex rounded-[var(--radius-md)] border border-[var(--border-default)] overflow-hidden">
+        <div
+          className="flex rounded-[var(--radius-md)] overflow-hidden"
+          style={{
+            border: '1px solid rgba(255,255,255,0.08)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+          }}
+        >
           {sources.map((p) => (
             <button
               key={p}
               onClick={() => setSourceFilter(p)}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+              className={`px-3 py-1.5 text-xs font-medium transition-all duration-200 ${
                 sourceFilter === p
                   ? 'bg-[var(--accent)] text-white'
-                  : 'text-[var(--text-secondary)] hover:bg-[var(--bg-tertiary)]'
+                  : 'text-[var(--text-secondary)] hover:bg-white/[0.04] hover:text-[var(--text-primary)]'
               }`}
+              style={sourceFilter === p ? { boxShadow: '0 0 12px rgba(56,189,248,0.2)' } : undefined}
             >
               {p}
             </button>
@@ -168,27 +176,27 @@ export default function Sessions() {
               </div>
               <div className="text-xs text-[var(--text-muted)]">
                 Messages
-                <div className="mt-1 text-sm text-[var(--text-primary)] font-[var(--font-mono)]">{selectedSession.message_count}</div>
+                <div className="mt-1 text-sm text-[var(--text-primary)] font-[var(--font-mono)]" style={{ textShadow: 'var(--text-glow-accent)' }}>{selectedSession.message_count}</div>
               </div>
               <div className="text-xs text-[var(--text-muted)]">
                 Tool Calls
-                <div className="mt-1 text-sm text-[var(--text-primary)] font-[var(--font-mono)]">{selectedSession.tool_call_count}</div>
+                <div className="mt-1 text-sm text-[var(--text-primary)] font-[var(--font-mono)]" style={{ textShadow: 'var(--text-glow-accent)' }}>{selectedSession.tool_call_count}</div>
               </div>
               <div className="text-xs text-[var(--text-muted)]">
                 Input Tokens
-                <div className="mt-1 text-sm text-[var(--text-primary)] font-[var(--font-mono)]">{selectedSession.input_tokens.toLocaleString()}</div>
+                <div className="mt-1 text-sm text-[var(--text-primary)] font-[var(--font-mono)]" style={{ textShadow: 'var(--text-glow-accent)' }}>{selectedSession.input_tokens.toLocaleString()}</div>
               </div>
               <div className="text-xs text-[var(--text-muted)]">
                 Output Tokens
-                <div className="mt-1 text-sm text-[var(--text-primary)] font-[var(--font-mono)]">{selectedSession.output_tokens.toLocaleString()}</div>
+                <div className="mt-1 text-sm text-[var(--text-primary)] font-[var(--font-mono)]" style={{ textShadow: 'var(--text-glow-accent)' }}>{selectedSession.output_tokens.toLocaleString()}</div>
               </div>
               <div className="text-xs text-[var(--text-muted)]">
                 Cache Read
-                <div className="mt-1 text-sm text-[var(--text-primary)] font-[var(--font-mono)]">{selectedSession.cache_read_tokens.toLocaleString()}</div>
+                <div className="mt-1 text-sm text-[var(--text-primary)] font-[var(--font-mono)]" style={{ textShadow: 'var(--text-glow-accent)' }}>{selectedSession.cache_read_tokens.toLocaleString()}</div>
               </div>
               <div className="text-xs text-[var(--text-muted)]">
                 Estimated Cost
-                <div className="mt-1 text-sm text-[var(--text-primary)] font-[var(--font-mono)]">${(selectedSession.estimated_cost_usd ?? 0).toFixed(4)}</div>
+                <div className="mt-1 text-sm text-[var(--text-primary)] font-[var(--font-mono)]" style={{ textShadow: 'var(--text-glow-accent)' }}>${(selectedSession.estimated_cost_usd ?? 0).toFixed(4)}</div>
               </div>
               <div className="text-xs text-[var(--text-muted)]">
                 Billing Provider
@@ -205,7 +213,7 @@ export default function Sessions() {
             </div>
 
             {selectedSession.started_at && (
-              <div className="border-t border-[var(--border-subtle)] pt-4">
+              <div className="border-t border-[rgba(255,255,255,0.06)] pt-4">
                 <div className="text-xs text-[var(--text-muted)]">
                   Started: {new Date(selectedSession.started_at * 1000).toLocaleString()}
                 </div>
@@ -218,9 +226,12 @@ export default function Sessions() {
             )}
 
             {selectedSession.preview && (
-              <div className="border-t border-[var(--border-subtle)] pt-4">
-                <h3 className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)] mb-2">Preview</h3>
-                <p className="text-sm text-[var(--text-primary)] pl-2 border-l-2 border-[var(--border-subtle)]">
+              <div className="border-t border-[rgba(255,255,255,0.06)] pt-4">
+                <h3 className="text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--text-muted)] mb-2">Preview</h3>
+                <p
+                  className="text-sm text-[var(--text-primary)] pl-3"
+                  style={{ borderLeft: '2px solid rgba(56,189,248,0.3)' }}
+                >
                   {selectedSession.preview}
                 </p>
               </div>

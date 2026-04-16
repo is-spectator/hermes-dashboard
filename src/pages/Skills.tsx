@@ -45,11 +45,32 @@ export default function Skills() {
               key={cat}
               onClick={() => setCategoryFilter(cat)}
               className={cn(
-                'px-2.5 py-1 text-xs rounded-full border transition-all duration-200 capitalize',
+                'px-2.5 py-1 text-xs rounded-full transition-all duration-200 capitalize',
                 categoryFilter === cat
-                  ? 'bg-[var(--accent)] text-white border-[var(--accent)] shadow-[var(--glow-accent)]'
-                  : 'text-[var(--text-secondary)] border-[var(--border-default)] hover:bg-[var(--bg-tertiary)] hover:border-[var(--text-muted)]'
+                  ? 'bg-[var(--accent)] text-white'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               )}
+              style={{
+                border: categoryFilter === cat
+                  ? '1px solid var(--accent)'
+                  : '1px solid rgba(255,255,255,0.08)',
+                boxShadow: categoryFilter === cat ? '0 0 12px rgba(56,189,248,0.2)' : undefined,
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                background: categoryFilter === cat ? undefined : 'rgba(255,255,255,0.03)',
+              }}
+              onMouseEnter={(e) => {
+                if (categoryFilter !== cat) {
+                  e.currentTarget.style.borderColor = 'rgba(56,189,248,0.2)'
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.06)'
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (categoryFilter !== cat) {
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.03)'
+                }
+              }}
             >
               {cat}
             </button>
@@ -63,14 +84,26 @@ export default function Skills() {
           <div
             key={skill.name}
             className={cn(
-              'rounded-[var(--radius-lg)] border bg-[var(--bg-secondary)] p-5 transition-all duration-200',
-              skill.enabled
-                ? 'border-[var(--border-default)] hover:border-[var(--accent)]/40 hover:shadow-[0_0_15px_rgba(59,130,246,0.08)]'
-                : 'border-[var(--border-default)] opacity-60 hover:opacity-80'
+              'rounded-[var(--radius-lg)] p-5 transition-all duration-200',
+              !skill.enabled && 'opacity-60 hover:opacity-80'
             )}
             style={{
               animation: `fade-in-up 200ms ease-out ${i * 40}ms both`,
+              background: 'rgba(255,255,255,0.03)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              border: '1px solid rgba(255,255,255,0.08)',
               boxShadow: 'var(--inner-glow)',
+            }}
+            onMouseEnter={(e) => {
+              if (skill.enabled) {
+                e.currentTarget.style.borderColor = 'rgba(56,189,248,0.2)'
+                e.currentTarget.style.boxShadow = '0 0 20px rgba(56,189,248,0.1), var(--inner-glow)'
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
+              e.currentTarget.style.boxShadow = 'var(--inner-glow)'
             }}
           >
             <div className="flex items-start justify-between mb-3">
@@ -78,18 +111,20 @@ export default function Skills() {
                 <Zap size={16} className={skill.enabled ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'} />
                 <h3 className="text-sm font-semibold font-[var(--font-mono)] text-[var(--text-primary)]">{skill.name}</h3>
               </div>
+              {/* Toggle with neon glow */}
               <div
                 className={cn(
                   'w-8 h-4 rounded-full relative cursor-pointer transition-all duration-300',
-                  skill.enabled ? 'bg-[var(--accent)]' : 'bg-[var(--bg-tertiary)]'
+                  skill.enabled ? 'bg-[var(--accent)]' : 'bg-[rgba(255,255,255,0.08)]'
                 )}
-                style={skill.enabled ? { boxShadow: '0 0 8px rgba(59, 130, 246, 0.3)' } : undefined}
+                style={skill.enabled ? { boxShadow: '0 0 10px rgba(56,189,248,0.4), 0 0 20px rgba(56,189,248,0.15)' } : undefined}
               >
                 <div
                   className={cn(
                     'absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all duration-300',
                     skill.enabled ? 'left-[18px]' : 'left-[2px]'
                   )}
+                  style={skill.enabled ? { boxShadow: '0 0 4px rgba(255,255,255,0.5)' } : undefined}
                 />
               </div>
             </div>

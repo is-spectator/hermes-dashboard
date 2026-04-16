@@ -6,7 +6,15 @@ export default function Cron() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-secondary)] p-8 text-center">
+      <div
+        className="rounded-[var(--radius-lg)] p-8 text-center"
+        style={{
+          background: 'rgba(255,255,255,0.03)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          border: '1px solid rgba(255,255,255,0.08)',
+        }}
+      >
         <AlertCircle size={40} className="mx-auto text-[var(--text-muted)] mb-4" />
         <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
           Cron Jobs Not Available
