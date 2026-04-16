@@ -23,31 +23,34 @@ export default function Settings() {
   const addToast = useToastStore((s) => s.addToast)
 
   const saveConnection = async () => {
-    setHermesApiUrl(apiUrl)
-    clearToken() // Clear cached token when URL changes
     setConnectionState('testing')
     setConnectedVersion(null)
     setConnectionError(null)
 
     try {
-      const res = await fetch(`${apiUrl}/api/status`, {
+      // Test the NEW url directly — do NOT persist until confirmed
+      const testRes = await fetch(`${apiUrl}/api/status`, {
         signal: AbortSignal.timeout(5000),
       })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const contentType = res.headers.get('content-type') || ''
-      if (!contentType.includes('application/json')) throw new Error('Non-JSON response')
-      const data = await res.json()
-      if (!data.version) throw new Error('Invalid status response')
+      if (!testRes.ok) throw new Error(`HTTP ${testRes.status}`)
+      const ct = testRes.headers.get('content-type') || ''
+      if (!ct.includes('json')) throw new Error('Not a Hermes API')
+      const data = await testRes.json()
+      if (!data.version) throw new Error('Invalid response')
 
+      // SUCCESS — now persist
+      setHermesApiUrl(apiUrl)
+      clearToken()
+      queryClient.clear()
       setConnectionState('connected')
       setConnectedVersion(data.version)
-      queryClient.invalidateQueries()
       addToast('success', `Connected to Hermes v${data.version}`)
     } catch (err) {
       setConnectionState('failed')
       const msg = err instanceof Error ? err.message : 'Unknown error'
       setConnectionError(`Connection failed: ${msg}`)
       addToast('error', `Connection failed: ${msg}`)
+      // Do NOT persist the bad URL
     }
   }
 
@@ -204,10 +207,15 @@ export default function Settings() {
       {/* Config (from /api/config) */}
       <section className="pt-8" style={sectionDivider}>
         <div className="flex items-center justify-between mb-1">
-          <h2 className="text-sm font-semibold text-[var(--text-primary)]">Configuration</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Configuration</h2>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.06] text-[var(--text-muted)] font-medium uppercase tracking-wider">
+              Read-only
+            </span>
+          </div>
           {configLoading && <RefreshCw size={14} className="text-[var(--text-muted)] animate-spin" />}
         </div>
-        <p className="text-xs text-[var(--text-muted)] mb-4">Raw configuration from the Hermes Agent.</p>
+        <p className="text-xs text-[var(--text-muted)] mb-4">Raw configuration from the Hermes Agent. Edit via the config file directly.</p>
 
         {config ? (
           <div
