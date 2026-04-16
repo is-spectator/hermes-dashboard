@@ -20,6 +20,7 @@ import {
   X,
 } from 'lucide-react'
 import { useAppStore } from '../stores/useAppStore'
+import { useStatus } from '../api/hooks'
 import { cn } from '../lib/utils'
 
 const navItems = [
@@ -34,26 +35,13 @@ const navItems = [
 ]
 
 function ConnectionStatus() {
-  const [status, setStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking')
+  const { data: statusData, isLoading, isError } = useStatus()
 
-  useEffect(() => {
-    const check = async () => {
-      try {
-        const baseUrl = localStorage.getItem('hermes-api-url') || import.meta.env.VITE_HERMES_API_URL || ''
-        const res = await fetch(`${baseUrl}/api/status`, { signal: AbortSignal.timeout(3000) })
-        if (!res.ok) { setStatus('disconnected'); return }
-        const contentType = res.headers.get('content-type') || ''
-        if (!contentType.includes('application/json')) { setStatus('disconnected'); return }
-        const data = await res.json()
-        setStatus(data.version ? 'connected' : 'disconnected')
-      } catch {
-        setStatus('disconnected')
-      }
-    }
-    check()
-    const interval = setInterval(check, 30000)
-    return () => clearInterval(interval)
-  }, [])
+  const status: 'connected' | 'disconnected' | 'checking' = isLoading
+    ? 'checking'
+    : statusData?.version && !isError
+      ? 'connected'
+      : 'disconnected'
 
   const glowColors = {
     connected: '#34d399',
