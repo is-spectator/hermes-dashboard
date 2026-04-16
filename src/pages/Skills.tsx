@@ -111,13 +111,14 @@ export default function Skills() {
                 <Zap size={16} className={skill.enabled ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'} />
                 <h3 className="text-sm font-semibold font-[var(--font-mono)] text-[var(--text-primary)]">{skill.name}</h3>
               </div>
-              {/* Toggle with neon glow */}
+              {/* Read-only toggle -- no enable/disable endpoint in Hermes v0.9.0 */}
               <div
                 className={cn(
-                  'w-8 h-4 rounded-full relative cursor-pointer transition-all duration-300',
+                  'w-8 h-4 rounded-full relative cursor-not-allowed opacity-60 transition-all duration-300',
                   skill.enabled ? 'bg-[var(--accent)]' : 'bg-[rgba(255,255,255,0.08)]'
                 )}
                 style={skill.enabled ? { boxShadow: '0 0 10px rgba(56,189,248,0.4), 0 0 20px rgba(56,189,248,0.15)' } : undefined}
+                title="Read-only in Hermes v0.9.0"
               >
                 <div
                   className={cn(

@@ -1,15 +1,65 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import SearchInput from '../components/SearchInput'
 import ProviderCard from '../components/ProviderCard'
-import { useEnv } from '../api/hooks'
+import { useEnv, useUpdateEnv, useDeleteEnvKey } from '../api/hooks'
+import { useToastStore } from '../stores/useToastStore'
 
 type FilterStatus = 'all' | 'configured' | 'unconfigured'
 
 export default function Providers() {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<FilterStatus>('all')
+  const [addKeyLoadingFor, setAddKeyLoadingFor] = useState<string | null>(null)
+  const [removeKeyLoadingFor, setRemoveKeyLoadingFor] = useState<string | null>(null)
+  const [errorFor, setErrorFor] = useState<Record<string, string>>({})
 
   const { data: envData, isLoading } = useEnv()
+  const updateEnv = useUpdateEnv()
+  const deleteEnvKey = useDeleteEnvKey()
+  const addToast = useToastStore((s) => s.addToast)
+
+  const handleAddKey = useCallback(
+    (envKey: string, value: string) => {
+      setAddKeyLoadingFor(envKey)
+      setErrorFor((prev) => ({ ...prev, [envKey]: '' }))
+      updateEnv.mutate(
+        { [envKey]: value },
+        {
+          onSuccess: () => {
+            setAddKeyLoadingFor(null)
+            addToast('success', `Key saved successfully`)
+          },
+          onError: (err) => {
+            setAddKeyLoadingFor(null)
+            const msg = err instanceof Error ? err.message : 'Unknown error'
+            setErrorFor((prev) => ({ ...prev, [envKey]: `Failed to save key: ${msg}` }))
+            addToast('error', `Failed to save key: ${msg}`)
+          },
+        },
+      )
+    },
+    [updateEnv, addToast],
+  )
+
+  const handleRemoveKey = useCallback(
+    (envKey: string) => {
+      setRemoveKeyLoadingFor(envKey)
+      setErrorFor((prev) => ({ ...prev, [envKey]: '' }))
+      deleteEnvKey.mutate(envKey, {
+        onSuccess: () => {
+          setRemoveKeyLoadingFor(null)
+          addToast('success', `Key removed successfully`)
+        },
+        onError: (err) => {
+          setRemoveKeyLoadingFor(null)
+          const msg = err instanceof Error ? err.message : 'Unknown error'
+          setErrorFor((prev) => ({ ...prev, [envKey]: `Failed to remove key: ${msg}` }))
+          addToast('error', `Failed to remove key: ${msg}`)
+        },
+      })
+    },
+    [deleteEnvKey, addToast],
+  )
 
   // Derive providers from env data
   const providers = useMemo(() => {
@@ -123,6 +173,11 @@ export default function Providers() {
                 configured={p.configured}
                 keys={p.keys}
                 getKeyUrl={p.getKeyUrl}
+                onAddKey={(value) => handleAddKey(p.envKey, value)}
+                onRemoveKey={() => handleRemoveKey(p.envKey)}
+                addKeyLoading={addKeyLoadingFor === p.envKey}
+                removeKeyLoading={removeKeyLoadingFor === p.envKey ? p.envKey : null}
+                error={errorFor[p.envKey] || null}
               />
             ))}
           </div>
@@ -144,6 +199,11 @@ export default function Providers() {
                 configured={p.configured}
                 keys={p.keys}
                 getKeyUrl={p.getKeyUrl}
+                onAddKey={(value) => handleAddKey(p.envKey, value)}
+                onRemoveKey={() => handleRemoveKey(p.envKey)}
+                addKeyLoading={addKeyLoadingFor === p.envKey}
+                removeKeyLoading={removeKeyLoadingFor === p.envKey ? p.envKey : null}
+                error={errorFor[p.envKey] || null}
               />
             ))}
           </div>

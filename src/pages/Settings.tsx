@@ -1,27 +1,54 @@
 import { useState } from 'react'
-import { Sun, Moon, ExternalLink, RefreshCw } from 'lucide-react'
+import { Sun, Moon, ExternalLink, RefreshCw, CheckCircle, XCircle } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import Button from '../components/Button'
 import { useAppStore } from '../stores/useAppStore'
 import { cn } from '../lib/utils'
 import { useStatus, useConfig } from '../api/hooks'
 import { clearToken } from '../api/client'
+import { useToastStore } from '../stores/useToastStore'
+
+type ConnectionState = 'idle' | 'testing' | 'connected' | 'failed'
 
 export default function Settings() {
   const { theme, setTheme, hermesApiUrl, setHermesApiUrl } = useAppStore()
   const [apiUrl, setApiUrl] = useState(hermesApiUrl)
-  const [saved, setSaved] = useState(false)
+  const [connectionState, setConnectionState] = useState<ConnectionState>('idle')
+  const [connectedVersion, setConnectedVersion] = useState<string | null>(null)
+  const [connectionError, setConnectionError] = useState<string | null>(null)
 
   const queryClient = useQueryClient()
   const { data: status } = useStatus()
   const { data: config, isLoading: configLoading } = useConfig()
+  const addToast = useToastStore((s) => s.addToast)
 
-  const saveConnection = () => {
+  const saveConnection = async () => {
     setHermesApiUrl(apiUrl)
     clearToken() // Clear cached token when URL changes
-    queryClient.invalidateQueries() // Re-fetch all data with the new URL
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    setConnectionState('testing')
+    setConnectedVersion(null)
+    setConnectionError(null)
+
+    try {
+      const res = await fetch(`${apiUrl}/api/status`, {
+        signal: AbortSignal.timeout(5000),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const contentType = res.headers.get('content-type') || ''
+      if (!contentType.includes('application/json')) throw new Error('Non-JSON response')
+      const data = await res.json()
+      if (!data.version) throw new Error('Invalid status response')
+
+      setConnectionState('connected')
+      setConnectedVersion(data.version)
+      queryClient.invalidateQueries()
+      addToast('success', `Connected to Hermes v${data.version}`)
+    } catch (err) {
+      setConnectionState('failed')
+      const msg = err instanceof Error ? err.message : 'Unknown error'
+      setConnectionError(`Connection failed: ${msg}`)
+      addToast('error', `Connection failed: ${msg}`)
+    }
   }
 
   const glassStyle = {
@@ -114,13 +141,29 @@ export default function Settings() {
                   e.currentTarget.style.boxShadow = 'none'
                 }}
               />
-              <Button onClick={saveConnection}>
-                {saved ? 'Saved!' : 'Save'}
+              <Button onClick={saveConnection} disabled={connectionState === 'testing'}>
+                {connectionState === 'testing' ? (
+                  <><RefreshCw size={14} className="animate-spin" /> Testing...</>
+                ) : (
+                  'Save'
+                )}
               </Button>
             </div>
             <p className="mt-1.5 text-[10px] text-[var(--text-muted)]">
               The URL where your Hermes Agent Dashboard API is running.
             </p>
+            {connectionState === 'connected' && connectedVersion && (
+              <div className="mt-2 flex items-center gap-1.5 text-xs text-[#34d399]">
+                <CheckCircle size={14} />
+                <span>Connected — Hermes v{connectedVersion}</span>
+              </div>
+            )}
+            {connectionState === 'failed' && connectionError && (
+              <div className="mt-2 flex items-center gap-1.5 text-xs text-[#f87171]">
+                <XCircle size={14} />
+                <span>{connectionError}</span>
+              </div>
+            )}
           </div>
         </div>
       </section>

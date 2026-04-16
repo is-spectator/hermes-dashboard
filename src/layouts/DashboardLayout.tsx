@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Outlet, NavLink, useLocation } from 'react-router-dom'
 import PageTransition from '../components/PageTransition'
+import ToastContainer from '../components/Toast'
 import {
   LayoutDashboard,
   Key,
@@ -96,6 +97,7 @@ export default function DashboardLayout() {
 
   return (
     <div className="flex min-h-screen">
+      <ToastContainer />
       {/* Sidebar -- Glass Panel */}
       <aside
         className="fixed top-0 left-0 h-screen z-40 flex flex-col"

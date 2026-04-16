@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronUp, ExternalLink, Plus, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronUp, ExternalLink, Plus, RefreshCw, Trash2 } from 'lucide-react'
 import Badge from './Badge'
 import Button from './Button'
 import { cn } from '../lib/utils'
@@ -15,6 +15,9 @@ interface ProviderCardProps {
   onDisconnect?: () => void
   onAddKey?: (key: string) => void
   onRemoveKey?: (keyName: string) => void
+  addKeyLoading?: boolean
+  removeKeyLoading?: string | null
+  error?: string | null
 }
 
 export default function ProviderCard({
@@ -28,6 +31,9 @@ export default function ProviderCard({
   onDisconnect,
   onAddKey,
   onRemoveKey,
+  addKeyLoading = false,
+  removeKeyLoading = null,
+  error = null,
 }: ProviderCardProps) {
   const [expanded, setExpanded] = useState(false)
   const [newKey, setNewKey] = useState('')
@@ -166,9 +172,19 @@ export default function ProviderCard({
                   </div>
                   <button
                     onClick={() => onRemoveKey?.(k.name)}
-                    className="p-1 rounded text-[var(--text-muted)] hover:text-[#f87171] transition-colors"
+                    disabled={removeKeyLoading === k.name}
+                    className={cn(
+                      'p-1 rounded transition-colors',
+                      removeKeyLoading === k.name
+                        ? 'text-[var(--text-muted)] opacity-50 cursor-not-allowed'
+                        : 'text-[var(--text-muted)] hover:text-[#f87171]'
+                    )}
                   >
-                    <Trash2 size={14} />
+                    {removeKeyLoading === k.name ? (
+                      <RefreshCw size={14} className="animate-spin" />
+                    ) : (
+                      <Trash2 size={14} />
+                    )}
                   </button>
                 </div>
               ))}
@@ -199,15 +215,22 @@ export default function ProviderCard({
             <Button
               variant="primary"
               size="sm"
-              disabled={!newKey.trim()}
+              disabled={!newKey.trim() || addKeyLoading}
               onClick={() => {
                 onAddKey?.(newKey)
                 setNewKey('')
               }}
             >
-              <Plus size={14} /> Add
+              {addKeyLoading ? (
+                <><RefreshCw size={14} className="animate-spin" /> Saving...</>
+              ) : (
+                <><Plus size={14} /> Add</>
+              )}
             </Button>
           </div>
+          {error && (
+            <p className="mt-1.5 text-xs text-[#f87171]">{error}</p>
+          )}
         </div>
       )}
     </div>
