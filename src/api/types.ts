@@ -68,6 +68,9 @@ export interface Session {
 
 export interface SessionsResponse {
   sessions: Session[]
+  total: number
+  limit: number
+  offset: number
 }
 
 /**
