@@ -42,7 +42,7 @@ export default function Sessions() {
 
   const totalMessages = sessions.reduce((a, s) => a + s.message_count, 0)
   const avgMessages = sessions.length ? Math.round(totalMessages / sessions.length) : 0
-  const totalCost = sessions.reduce((a, s) => a + s.estimated_cost_usd, 0)
+  const totalCost = sessions.reduce((a, s) => a + (s.estimated_cost_usd ?? 0), 0)
 
   const columns: Column<Session>[] = [
     {
@@ -90,7 +90,7 @@ export default function Sessions() {
       width: '80px',
       render: (row) => (
         <span className="font-[var(--font-mono)] text-xs">
-          ${row.estimated_cost_usd.toFixed(4)}
+          ${(row.estimated_cost_usd ?? 0).toFixed(4)}
         </span>
       ),
     },
@@ -188,7 +188,7 @@ export default function Sessions() {
               </div>
               <div className="text-xs text-[var(--text-muted)]">
                 Estimated Cost
-                <div className="mt-1 text-sm text-[var(--text-primary)] font-[var(--font-mono)]">${selectedSession.estimated_cost_usd.toFixed(4)}</div>
+                <div className="mt-1 text-sm text-[var(--text-primary)] font-[var(--font-mono)]">${(selectedSession.estimated_cost_usd ?? 0).toFixed(4)}</div>
               </div>
               <div className="text-xs text-[var(--text-muted)]">
                 Billing Provider

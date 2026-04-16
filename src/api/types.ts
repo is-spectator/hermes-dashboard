@@ -63,10 +63,10 @@ export interface Session {
   reasoning_tokens: number
   billing_provider: string
   billing_base_url: string
-  estimated_cost_usd: number
-  title: string
+  estimated_cost_usd: number | null
+  title: string | null
   last_active: number
-  preview: string
+  preview: string | null
   is_active: boolean
 }
 
