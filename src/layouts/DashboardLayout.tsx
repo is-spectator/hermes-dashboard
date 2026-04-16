@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Outlet, NavLink, useLocation } from 'react-router-dom'
+import PageTransition from '../components/PageTransition'
 import {
   LayoutDashboard,
   Key,
@@ -173,7 +174,9 @@ export default function DashboardLayout() {
 
         {/* Page Content */}
         <main className="p-6">
-          <Outlet />
+          <PageTransition>
+            <Outlet />
+          </PageTransition>
         </main>
       </div>
     </div>
