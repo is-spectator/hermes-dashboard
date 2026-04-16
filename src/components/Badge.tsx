@@ -5,24 +5,24 @@ type BadgeStyle = 'filled' | 'outline'
 
 const variantClasses: Record<BadgeVariant, Record<BadgeStyle, string>> = {
   success: {
-    filled: 'bg-[rgba(52,211,153,0.12)] text-[#34d399] border-[rgba(52,211,153,0.2)]',
-    outline: 'border-[rgba(52,211,153,0.3)] text-[#34d399] bg-transparent',
+    filled: 'bg-[var(--success-soft)] text-[var(--success)]',
+    outline: 'border border-[var(--success)]/30 text-[var(--success)] bg-transparent',
   },
   warning: {
-    filled: 'bg-[rgba(251,191,36,0.12)] text-[#fbbf24] border-[rgba(251,191,36,0.2)]',
-    outline: 'border-[rgba(251,191,36,0.3)] text-[#fbbf24] bg-transparent',
+    filled: 'bg-[var(--warning-soft)] text-[var(--warning)]',
+    outline: 'border border-[var(--warning)]/30 text-[var(--warning)] bg-transparent',
   },
   danger: {
-    filled: 'bg-[rgba(248,113,113,0.12)] text-[#f87171] border-[rgba(248,113,113,0.2)]',
-    outline: 'border-[rgba(248,113,113,0.3)] text-[#f87171] bg-transparent',
+    filled: 'bg-[var(--danger-soft)] text-[var(--danger)]',
+    outline: 'border border-[var(--danger)]/30 text-[var(--danger)] bg-transparent',
   },
   info: {
-    filled: 'bg-[rgba(56,189,248,0.1)] text-[#38bdf8] border-[rgba(56,189,248,0.2)]',
-    outline: 'border-[rgba(56,189,248,0.3)] text-[#38bdf8] bg-transparent',
+    filled: 'bg-[var(--accent-soft)] text-[var(--accent)]',
+    outline: 'border border-[var(--accent)]/30 text-[var(--accent)] bg-transparent',
   },
   neutral: {
-    filled: 'bg-[rgba(255,255,255,0.06)] text-[var(--text-secondary)] border-[rgba(255,255,255,0.08)]',
-    outline: 'border-[rgba(255,255,255,0.1)] text-[var(--text-secondary)] bg-transparent',
+    filled: 'bg-[var(--bg-surface-2)] text-[var(--text-secondary)]',
+    outline: 'border border-[var(--border-default)] text-[var(--text-secondary)] bg-transparent',
   },
 }
 
@@ -36,13 +36,9 @@ export default function Badge({ children, variant = 'neutral', style = 'filled' 
   return (
     <span
       className={cn(
-        'inline-flex items-center px-2 py-0.5 rounded-[var(--radius-sm)] text-[11px] font-medium border leading-tight',
+        'inline-flex items-center px-1.5 py-0.5 rounded-[4px] text-[11px] font-medium leading-tight',
         variantClasses[variant][style]
       )}
-      style={{
-        backdropFilter: 'blur(4px)',
-        WebkitBackdropFilter: 'blur(4px)',
-      }}
     >
       {children}
     </span>

@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { AlertCircle, WifiOff } from 'lucide-react'
-import StatusDot from '../components/StatusDot'
+import StatusBadge from '../components/StatusBadge'
 import Badge from '../components/Badge'
 import SkeletonLoader from '../components/SkeletonLoader'
 import { cn } from '../lib/utils'
@@ -20,11 +20,12 @@ function PlatformIcon({ name, connected }: { name: string; connected: boolean })
   const letter = PLATFORM_ICONS[name.toLowerCase()] ?? name.charAt(0).toUpperCase()
   return (
     <div
-      className="w-10 h-10 rounded-[var(--radius-md)] flex items-center justify-center text-sm font-semibold select-none"
-      style={{
-        background: connected ? 'rgba(52,211,153,0.1)' : 'rgba(255,255,255,0.04)',
-        color: connected ? '#34d399' : 'var(--text-muted)',
-      }}
+      className={cn(
+        'w-10 h-10 rounded-[var(--radius-md)] flex items-center justify-center text-sm font-semibold select-none',
+        connected
+          ? 'bg-[var(--success-soft)] text-[var(--success)]'
+          : 'bg-[var(--bg-surface-2)] text-[var(--text-tertiary)]'
+      )}
     >
       {letter}
     </div>
@@ -38,15 +39,7 @@ function GatewaysSkeleton() {
   return (
     <div className="space-y-6">
       {/* Master status skeleton */}
-      <div
-        className="rounded-[var(--radius-lg)] p-5"
-        style={{
-          background: 'var(--glass-bg)',
-          backdropFilter: 'var(--glass-blur)',
-          WebkitBackdropFilter: 'var(--glass-blur)',
-          border: 'var(--glass-border)',
-        }}
-      >
+      <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <SkeletonLoader className="w-2.5 h-2.5 rounded-full" />
@@ -67,13 +60,7 @@ function GatewaysSkeleton() {
         {Array.from({ length: 3 }).map((_, i) => (
           <div
             key={i}
-            className="rounded-[var(--radius-lg)] p-5"
-            style={{
-              background: 'var(--glass-bg)',
-              backdropFilter: 'var(--glass-blur)',
-              WebkitBackdropFilter: 'var(--glass-blur)',
-              border: 'var(--glass-border)',
-            }}
+            className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-5"
           >
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
@@ -134,16 +121,8 @@ export default function Gateways() {
   if (error) {
     return (
       <div className="space-y-6">
-        <div
-          className="rounded-[var(--radius-lg)] p-8 text-center"
-          style={{
-            background: 'rgba(248,113,113,0.04)',
-            backdropFilter: 'var(--glass-blur)',
-            WebkitBackdropFilter: 'var(--glass-blur)',
-            border: '1px solid rgba(248,113,113,0.15)',
-          }}
-        >
-          <AlertCircle size={36} className="mx-auto text-[#f87171] mb-4 opacity-80" />
+        <div className="rounded-[var(--radius-md)] border border-[var(--danger)]/20 bg-[var(--danger-soft)] p-8 text-center">
+          <AlertCircle size={36} className="mx-auto text-[var(--danger)] mb-4 opacity-80" />
           <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">
             Unable to load gateway status
           </h2>
@@ -159,23 +138,15 @@ export default function Gateways() {
   return (
     <div className="space-y-6">
       {/* Gateway master status */}
-      <div
-        className="rounded-[var(--radius-lg)] p-5"
-        style={{
-          background: 'var(--glass-bg)',
-          backdropFilter: 'var(--glass-blur)',
-          WebkitBackdropFilter: 'var(--glass-blur)',
-          border: 'var(--glass-border)',
-        }}
-      >
+      <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <StatusDot status={status?.gateway_running ? 'online' : 'offline'} size="md" />
+            <StatusBadge status={status?.gateway_running ? 'online' : 'offline'} size="md" />
             <div>
               <h2 className="text-sm font-medium text-[var(--text-primary)]">
                 Gateway Process
               </h2>
-              <p className="text-xs text-[var(--text-muted)]">
+              <p className="text-xs text-[var(--text-tertiary)]">
                 {status?.gateway_running
                   ? `Running (PID: ${status.gateway_pid ?? 'unknown'})`
                   : 'Not running'}
@@ -188,12 +159,9 @@ export default function Gateways() {
           </Badge>
         </div>
         {status?.gateway_exit_reason && (
-          <div
-            className="mt-3 flex items-start gap-2 p-2 rounded-[var(--radius-md)]"
-            style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.12)' }}
-          >
-            <AlertCircle size={14} className="text-[#f87171] shrink-0 mt-0.5" />
-            <span className="text-xs text-[#f87171]">Exit reason: {status.gateway_exit_reason}</span>
+          <div className="mt-3 flex items-start gap-2 p-2 rounded-[var(--radius-md)] bg-[var(--danger-soft)] border border-[var(--danger)]/20">
+            <AlertCircle size={14} className="text-[var(--danger)] shrink-0 mt-0.5" />
+            <span className="text-xs text-[var(--danger)]">Exit reason: {status.gateway_exit_reason}</span>
           </div>
         )}
       </div>
@@ -205,69 +173,44 @@ export default function Gateways() {
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {gateways.map((gw, i) => (
+            {gateways.map((gw) => (
               <div
                 key={gw.name}
                 className={cn(
-                  'rounded-[var(--radius-lg)] p-5 transition-all duration-200 hover:translate-y-[-2px]',
-                  gw.connected ? 'border-l-[3px] border-l-[#34d399]' : '',
-                  !gw.connected ? 'opacity-60' : ''
+                  'rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-5 transition-colors hover:bg-[var(--bg-surface-2)]',
+                  !gw.connected && 'opacity-60'
                 )}
-                style={{
-                  animation: `fade-in-up 200ms ease-out ${i * 60}ms both`,
-                  background: 'var(--glass-bg)',
-                  backdropFilter: 'var(--glass-blur)',
-                  WebkitBackdropFilter: 'var(--glass-blur)',
-                  border: gw.connected ? undefined : 'var(--glass-border)',
-                  borderRight: 'var(--glass-border)',
-                  borderTop: 'var(--glass-border)',
-                  borderBottom: 'var(--glass-border)',
-                  boxShadow: gw.connected ? '0 0 12px rgba(52,211,153,0.08)' : undefined,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = gw.connected
-                    ? '0 0 24px rgba(52,211,153,0.15), 0 8px 24px rgba(0,0,0,0.3)'
-                    : '0 0 20px rgba(56,189,248,0.1), 0 8px 24px rgba(0,0,0,0.3)'
-                  if (!gw.connected) e.currentTarget.style.opacity = '0.8'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = gw.connected ? '0 0 12px rgba(52,211,153,0.08)' : ''
-                  if (!gw.connected) e.currentTarget.style.opacity = ''
-                }}
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <PlatformIcon name={gw.name} connected={gw.connected} />
                     <div>
                       <h3 className="text-sm font-medium text-[var(--text-primary)] capitalize">{gw.name}</h3>
-                      <span className="text-xs text-[var(--text-muted)]">{gw.platform}</span>
+                      <span className="text-xs text-[var(--text-tertiary)]">{gw.platform}</span>
                     </div>
                   </div>
-                  <StatusDot status={gw.connected ? 'online' : 'offline'} showLabel />
+                  <StatusBadge status={gw.connected ? 'online' : 'offline'} showLabel />
                 </div>
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-[var(--text-muted)]">Status</span>
+                    <span className="text-[var(--text-tertiary)]">Status</span>
                     <Badge variant={gw.connected ? 'success' : 'danger'}>
                       {gw.connected ? 'Connected' : 'Disconnected'}
                     </Badge>
                   </div>
                   {gw.last_active && (
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-[var(--text-muted)]">Last Active</span>
+                      <span className="text-[var(--text-tertiary)]">Last Active</span>
                       <span className="text-[var(--text-secondary)]">{gw.last_active}</span>
                     </div>
                   )}
                 </div>
 
                 {gw.error && (
-                  <div
-                    className="mt-3 flex items-start gap-2 p-2 rounded-[var(--radius-md)]"
-                    style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.12)' }}
-                  >
-                    <AlertCircle size={14} className="text-[#f87171] shrink-0 mt-0.5" />
-                    <span className="text-xs text-[#f87171]">{gw.error}</span>
+                  <div className="mt-3 flex items-start gap-2 p-2 rounded-[var(--radius-md)] bg-[var(--danger-soft)] border border-[var(--danger)]/20">
+                    <AlertCircle size={14} className="text-[var(--danger)] shrink-0 mt-0.5" />
+                    <span className="text-xs text-[var(--danger)]">{gw.error}</span>
                   </div>
                 )}
               </div>
@@ -276,16 +219,8 @@ export default function Gateways() {
         </>
       ) : (
         /* Empty state — no platforms at all */
-        <div
-          className="rounded-[var(--radius-lg)] p-8 text-center"
-          style={{
-            background: 'var(--glass-bg)',
-            backdropFilter: 'var(--glass-blur)',
-            WebkitBackdropFilter: 'var(--glass-blur)',
-            border: 'var(--glass-border)',
-          }}
-        >
-          <WifiOff size={36} className="mx-auto text-[var(--text-muted)] mb-4 opacity-60" />
+        <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-8 text-center">
+          <WifiOff size={36} className="mx-auto text-[var(--text-tertiary)] mb-4" />
           <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">
             No gateway platforms configured
           </h2>

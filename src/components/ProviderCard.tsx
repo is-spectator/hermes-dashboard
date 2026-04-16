@@ -39,7 +39,7 @@ export default function ProviderCard({
   const [newKey, setNewKey] = useState('')
   const prevLoadingRef = useRef(addKeyLoading)
 
-  // Clear input when loading finishes successfully (loading → done transition).
+  // Clear input when loading finishes successfully (loading -> done transition).
   // The ref tracks previous loading state; the effect fires on prop change.
   useEffect(() => {
     const wasLoading = prevLoadingRef.current
@@ -51,38 +51,16 @@ export default function ProviderCard({
     }
   }, [addKeyLoading, error])
 
-  const glassStyle = {
-    background: 'rgba(255,255,255,0.03)',
-    backdropFilter: 'blur(12px)',
-    WebkitBackdropFilter: 'blur(12px)',
-  }
-
   if (type === 'oauth') {
     return (
       <div
         className={cn(
-          'rounded-[var(--radius-lg)] p-5 transition-all duration-200',
-          authStatus === 'connected'
-            ? 'border-l-[3px] border-l-[#34d399]'
-            : ''
+          'rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-5 transition-colors hover:bg-[var(--bg-surface-2)]',
         )}
-        style={{
-          ...glassStyle,
-          border: authStatus === 'connected'
-            ? undefined
-            : '1px solid rgba(255,255,255,0.08)',
-          borderRight: '1px solid rgba(255,255,255,0.08)',
-          borderTop: '1px solid rgba(255,255,255,0.08)',
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
-          boxShadow: authStatus === 'connected' ? 'var(--glow-success)' : undefined,
-        }}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div
-              className="w-10 h-10 rounded-[var(--radius-md)] flex items-center justify-center text-sm font-semibold text-[var(--text-secondary)]"
-              style={{ background: 'rgba(255,255,255,0.06)' }}
-            >
+            <div className="w-10 h-10 rounded-[var(--radius-md)] flex items-center justify-center text-sm font-semibold text-[var(--text-secondary)] bg-[var(--bg-surface-2)]">
               {name.slice(0, 2).toUpperCase()}
             </div>
             <div>
@@ -108,27 +86,8 @@ export default function ProviderCard({
   return (
     <div
       className={cn(
-        'rounded-[var(--radius-lg)] transition-all duration-200 hover:translate-y-[-2px]',
-        configured ? 'border-l-[3px] border-l-[#34d399]' : ''
+        'rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] transition-colors hover:bg-[var(--bg-surface-2)]',
       )}
-      style={{
-        ...glassStyle,
-        border: configured ? undefined : '1px solid rgba(255,255,255,0.08)',
-        borderRight: '1px solid rgba(255,255,255,0.08)',
-        borderTop: '1px solid rgba(255,255,255,0.08)',
-        borderBottom: '1px solid rgba(255,255,255,0.08)',
-        boxShadow: configured ? 'var(--glow-success)' : undefined,
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.boxShadow = configured
-          ? 'var(--glow-success), 0 8px 24px rgba(0,0,0,0.3)'
-          : '0 0 20px rgba(56,189,248,0.1), 0 8px 24px rgba(0,0,0,0.3)'
-        if (!configured) e.currentTarget.style.borderColor = 'rgba(56,189,248,0.15)'
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.boxShadow = configured ? 'var(--glow-success)' : ''
-        if (!configured) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
-      }}
     >
       <div
         role="button"
@@ -140,13 +99,10 @@ export default function ProviderCard({
             setExpanded(!expanded)
           }
         }}
-        className="w-full flex items-center justify-between p-5 text-left hover:bg-white/[0.02] rounded-[var(--radius-lg)] transition-colors cursor-pointer"
+        className="w-full flex items-center justify-between p-5 text-left rounded-[var(--radius-md)] cursor-pointer"
       >
         <div className="flex items-center gap-3">
-          <div
-            className="w-10 h-10 rounded-[var(--radius-md)] flex items-center justify-center text-sm font-semibold text-[var(--text-secondary)]"
-            style={{ background: 'rgba(255,255,255,0.06)' }}
-          >
+          <div className="w-10 h-10 rounded-[var(--radius-md)] flex items-center justify-center text-sm font-semibold text-[var(--text-secondary)] bg-[var(--bg-surface-2)]">
             {name.slice(0, 2).toUpperCase()}
           </div>
           <div>
@@ -161,35 +117,31 @@ export default function ProviderCard({
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="group/link inline-flex items-center gap-1 text-[10px] text-[var(--accent)]"
+                  className="inline-flex items-center gap-1 text-[10px] text-[var(--accent)] hover:underline"
                 >
-                  <span className="relative">
-                    Get Key
-                    <span className="absolute inset-x-0 -bottom-px h-px bg-[var(--accent)] origin-left scale-x-0 group-hover/link:scale-x-100 transition-transform duration-200" />
-                  </span>
+                  Get Key
                   <ExternalLink size={10} />
                 </a>
               )}
             </div>
           </div>
         </div>
-        {expanded ? <ChevronUp size={16} className="text-[var(--text-muted)]" /> : <ChevronDown size={16} className="text-[var(--text-muted)]" />}
+        {expanded ? <ChevronUp size={16} className="text-[var(--text-tertiary)]" /> : <ChevronDown size={16} className="text-[var(--text-tertiary)]" />}
       </div>
 
       {expanded && (
-        <div className="px-5 pb-5 border-t border-[rgba(255,255,255,0.06)]">
+        <div className="px-5 pb-5 border-t border-[var(--border-default)]">
           {/* Existing keys */}
           {keys.length > 0 && (
             <div className="mt-3 space-y-2">
               {keys.map((k) => (
                 <div
                   key={k.name}
-                  className="flex items-center justify-between px-3 py-2 rounded-[var(--radius-md)]"
-                  style={{ background: 'rgba(255,255,255,0.04)' }}
+                  className="flex items-center justify-between px-3 py-2 rounded-[var(--radius-md)] bg-[var(--bg-surface-2)]"
                 >
                   <div>
                     <span className="text-xs text-[var(--text-secondary)]">{k.name}</span>
-                    <span className="ml-2 text-xs font-[var(--font-mono)] text-[var(--text-muted)]">{k.masked_value}</span>
+                    <span className="ml-2 text-xs font-[var(--font-mono)] text-[var(--text-tertiary)]">{k.masked_value}</span>
                   </div>
                   <button
                     onClick={() => onRemoveKey?.(k.name)}
@@ -197,8 +149,8 @@ export default function ProviderCard({
                     className={cn(
                       'p-1 rounded transition-colors',
                       removeKeyLoading === k.name
-                        ? 'text-[var(--text-muted)] opacity-50 cursor-not-allowed'
-                        : 'text-[var(--text-muted)] hover:text-[#f87171]'
+                        ? 'text-[var(--text-tertiary)] opacity-50 cursor-not-allowed'
+                        : 'text-[var(--text-tertiary)] hover:text-[var(--danger)]'
                     )}
                   >
                     {removeKeyLoading === k.name ? (
@@ -219,19 +171,7 @@ export default function ProviderCard({
               placeholder="Enter API key..."
               value={newKey}
               onChange={(e) => setNewKey(e.target.value)}
-              className="flex-1 h-8 px-3 rounded-[var(--radius-md)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none transition-all duration-200"
-              style={{
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(56,189,248,0.3)'
-                e.currentTarget.style.boxShadow = '0 0 8px rgba(56,189,248,0.1)'
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
-                e.currentTarget.style.boxShadow = 'none'
-              }}
+              className="flex-1 h-8 px-3 rounded-[var(--radius-md)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] bg-[var(--bg-surface-2)] border border-[var(--border-default)] focus:border-[var(--border-focus)] focus:outline-none focus:ring-1 focus:ring-[var(--border-focus)]/20 transition-colors"
             />
             <Button
               variant="primary"
@@ -249,7 +189,7 @@ export default function ProviderCard({
             </Button>
           </div>
           {error && (
-            <p className="mt-1.5 text-xs text-[#f87171]">{error}</p>
+            <p className="mt-1.5 text-xs text-[var(--danger)]">{error}</p>
           )}
         </div>
       )}

@@ -7,39 +7,31 @@ function ToastItem({ toast, onDismiss }: { toast: ToastType; onDismiss: () => vo
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
-    // Trigger enter animation on next frame
     const frame = requestAnimationFrame(() => setVisible(true))
     return () => cancelAnimationFrame(frame)
   }, [])
 
   const isSuccess = toast.type === 'success'
-  const borderColor = isSuccess ? 'rgba(52,211,153,0.4)' : 'rgba(248,113,113,0.4)'
-  const glowColor = isSuccess ? 'rgba(52,211,153,0.15)' : 'rgba(248,113,113,0.15)'
-  const iconColor = isSuccess ? '#34d399' : '#f87171'
 
   return (
     <div
-      className="flex items-start gap-3 px-4 py-3 rounded-[var(--radius-lg)] text-sm max-w-sm pointer-events-auto"
+      className="flex items-start gap-3 px-4 py-3 rounded-[var(--radius-md)] text-sm max-w-sm pointer-events-auto bg-[var(--bg-surface)] border border-[var(--border-default)]"
       style={{
-        background: 'rgba(10,10,14,0.92)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        border: `1px solid ${borderColor}`,
-        boxShadow: `0 0 20px ${glowColor}, 0 8px 32px rgba(0,0,0,0.4)`,
+        boxShadow: 'var(--shadow-md)',
         opacity: visible ? 1 : 0,
         transform: visible ? 'translateX(0)' : 'translateX(20px)',
         transition: 'opacity 200ms ease-out, transform 200ms ease-out',
       }}
     >
       {isSuccess ? (
-        <CheckCircle size={16} className="shrink-0 mt-0.5" style={{ color: iconColor }} />
+        <CheckCircle size={16} className="shrink-0 mt-0.5 text-[var(--success)]" />
       ) : (
-        <AlertCircle size={16} className="shrink-0 mt-0.5" style={{ color: iconColor }} />
+        <AlertCircle size={16} className="shrink-0 mt-0.5 text-[var(--danger)]" />
       )}
       <span className="flex-1 text-[var(--text-primary)] leading-snug">{toast.message}</span>
       <button
         onClick={onDismiss}
-        className="shrink-0 p-0.5 rounded text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+        className="shrink-0 p-0.5 rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
       >
         <X size={14} />
       </button>

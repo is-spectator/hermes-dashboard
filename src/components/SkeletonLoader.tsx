@@ -8,12 +8,9 @@ export default function SkeletonLoader({ className }: SkeletonLoaderProps) {
   return (
     <div
       className={cn(
-        'rounded-[var(--radius-md)] animate-[shimmer_1.5s_linear_infinite] bg-[length:200%_100%]',
+        'rounded-[var(--radius-sm)] bg-[var(--bg-surface-2)] animate-pulse',
         className
       )}
-      style={{
-        backgroundImage: 'linear-gradient(90deg, rgba(255,255,255,0.03), rgba(255,255,255,0.06), rgba(255,255,255,0.03))',
-      }}
     />
   )
 }

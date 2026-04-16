@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { MessageSquare, Terminal, Hash, Wrench, DollarSign, AlertCircle } from 'lucide-react'
-import MetricCard from '../components/MetricCard'
+import StatCard from '../components/StatCard'
 import DataTable, { type Column } from '../components/DataTable'
 import SearchInput from '../components/SearchInput'
 import SideDrawer from '../components/SideDrawer'
@@ -36,7 +36,7 @@ function SessionDetail({ session }: { session: Session }) {
           { label: 'Output', value: session.output_tokens.toLocaleString(), mono: true },
           { label: 'Cached', value: session.cache_read_tokens.toLocaleString(), mono: true },
         ].map((item) => (
-          <div key={item.label} className="text-xs text-[var(--text-muted)]">
+          <div key={item.label} className="text-xs text-[var(--text-tertiary)]">
             {item.label}
             <div className="mt-1">
               {item.badge ? (
@@ -54,38 +54,34 @@ function SessionDetail({ session }: { session: Session }) {
       </div>
 
       {session.started_at && (
-        <div className="text-xs text-[var(--text-muted)]" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '12px' }}>
+        <div className="text-xs text-[var(--text-tertiary)] border-t border-[var(--border-default)] pt-3">
           Started: {new Date(session.started_at * 1000).toLocaleString()}
           {session.ended_at && <span className="ml-4">Ended: {new Date(session.ended_at * 1000).toLocaleString()}</span>}
         </div>
       )}
 
       {/* Conversation */}
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '16px' }}>
-        <h3 className="text-xs font-semibold uppercase tracking-[0.15em] text-[var(--text-muted)] mb-4">
+      <div className="border-t border-[var(--border-default)] pt-4">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--text-tertiary)] mb-4">
           Conversation ({messages.length})
         </h3>
 
         {msgsLoading && (
-          <div className="text-sm text-[var(--text-muted)] text-center py-8">Loading messages...</div>
+          <div className="text-sm text-[var(--text-tertiary)] text-center py-8">Loading messages...</div>
         )}
 
         <div className="space-y-4">
           {messages.map((msg, i) => (
-            <div
-              key={i}
-              className="animate-[fade-in-up_150ms_ease-out]"
-              style={{ animationDelay: `${Math.min(i * 30, 300)}ms`, animationFillMode: 'both' }}
-            >
+            <div key={i}>
               <div className="flex items-center gap-2 mb-1.5">
                 <Badge variant={roleBadge[msg.role] || 'neutral'} style="outline">
                   {msg.role}
                 </Badge>
               </div>
               <div
-                className="text-sm text-[var(--text-primary)] pl-3 whitespace-pre-wrap break-words leading-relaxed"
+                className="text-sm text-[var(--text-primary)] pl-3 whitespace-pre-wrap break-words leading-relaxed border-l-2"
                 style={{
-                  borderLeft: `2px solid ${msg.role === 'user' ? 'rgba(56,189,248,0.3)' : msg.role === 'assistant' ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.08)'}`,
+                  borderColor: msg.role === 'user' ? 'var(--accent)' : msg.role === 'assistant' ? 'var(--success)' : 'var(--border-default)',
                 }}
               >
                 {msg.content.length > 800 ? msg.content.slice(0, 800) + '...' : msg.content}
@@ -95,7 +91,7 @@ function SessionDetail({ session }: { session: Session }) {
         </div>
 
         {!msgsLoading && messages.length === 0 && (
-          <div className="text-sm text-[var(--text-muted)] text-center py-4">No messages in this session</div>
+          <div className="text-sm text-[var(--text-tertiary)] text-center py-4">No messages in this session</div>
         )}
       </div>
     </div>
@@ -165,7 +161,7 @@ const columns: Column<Session>[] = [
     header: 'Time',
     width: '100px',
     render: (row) => (
-      <span className="text-xs text-[var(--text-muted)]">
+      <span className="text-xs text-[var(--text-tertiary)]">
         {formatRelativeTime(new Date(row.last_active * 1000).toISOString())}
       </span>
     ),
@@ -210,33 +206,25 @@ export default function Sessions() {
     <div className="space-y-6">
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard title="Total Sessions" value={totalSessionCount} />
-        <MetricCard title="Active" value={allSessions.filter((s) => s.is_active).length} subtitle="sessions" />
-        <MetricCard title="Tool Calls" value={totalToolCalls} icon={<Wrench size={16} />} subtitle="from loaded sessions" />
-        <MetricCard title="Total Cost" value={`$${totalCost.toFixed(2)}`} icon={<DollarSign size={16} />} animate={false} />
+        <StatCard title="Total Sessions" value={totalSessionCount} />
+        <StatCard title="Active" value={allSessions.filter((s) => s.is_active).length} subtitle="sessions" />
+        <StatCard title="Tool Calls" value={totalToolCalls} icon={<Wrench size={16} />} subtitle="from loaded sessions" />
+        <StatCard title="Total Cost" value={`$${totalCost.toFixed(2)}`} icon={<DollarSign size={16} />} animate={false} />
       </div>
 
       {/* Toolbar */}
       <div className="flex items-center gap-3 flex-wrap">
         <SearchInput value={search} onChange={setSearch} placeholder="Search sessions..." className="w-64" />
-        <div
-          className="flex rounded-[var(--radius-md)] overflow-hidden"
-          style={{
-            border: '1px solid rgba(255,255,255,0.08)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-          }}
-        >
+        <div className="flex rounded-[var(--radius-md)] overflow-hidden border border-[var(--border-default)]">
           {sources.map((p) => (
             <button
               key={p}
               onClick={() => setSourceFilter(p)}
-              className={`px-3 py-1.5 text-xs font-medium transition-all duration-200 ${
+              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
                 sourceFilter === p
                   ? 'bg-[var(--accent)] text-white'
-                  : 'text-[var(--text-secondary)] hover:bg-white/[0.04] hover:text-[var(--text-primary)]'
+                  : 'text-[var(--text-secondary)] hover:bg-[var(--bg-surface-2)] hover:text-[var(--text-primary)]'
               }`}
-              style={sourceFilter === p ? { boxShadow: '0 0 12px rgba(56,189,248,0.2)' } : undefined}
             >
               {p}
             </button>
@@ -246,15 +234,9 @@ export default function Sessions() {
 
       {/* Table — error state takes priority over empty state */}
       {error ? (
-        <div
-          className="flex items-center gap-3 rounded-[var(--radius-lg)] p-6 text-sm"
-          style={{
-            background: 'rgba(239,68,68,0.06)',
-            border: '1px solid rgba(239,68,68,0.2)',
-          }}
-        >
-          <AlertCircle size={18} className="text-red-400 shrink-0" />
-          <span className="text-red-300">
+        <div className="flex items-center gap-3 rounded-[var(--radius-md)] p-6 text-sm bg-[var(--danger-soft)] border border-[var(--danger)]/20">
+          <AlertCircle size={18} className="text-[var(--danger)] shrink-0" />
+          <span className="text-[var(--danger)]">
             Failed to load sessions: {error instanceof Error ? error.message : 'Unknown error'}
           </span>
         </div>

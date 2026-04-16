@@ -54,24 +54,12 @@ export default function Settings() {
     }
   }
 
-  const glassStyle = {
-    background: 'rgba(255,255,255,0.03)',
-    backdropFilter: 'blur(12px)',
-    WebkitBackdropFilter: 'blur(12px)',
-    border: '1px solid rgba(255,255,255,0.08)',
-  }
-
-  const sectionDivider = {
-    borderTop: '1px solid transparent',
-    borderImage: 'linear-gradient(90deg, rgba(56,189,248,0.15), rgba(255,255,255,0.04), transparent) 1',
-  }
-
   return (
     <div className="max-w-2xl space-y-8">
       {/* Appearance */}
       <section>
         <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">Appearance</h2>
-        <p className="text-xs text-[var(--text-muted)] mb-4">Customize how Hermes Dashboard looks.</p>
+        <p className="text-xs text-[var(--text-tertiary)] mb-4">Customize how Hermes Dashboard looks.</p>
 
         <div className="space-y-4">
           <div>
@@ -82,30 +70,11 @@ export default function Settings() {
                   key={t}
                   onClick={() => setTheme(t)}
                   className={cn(
-                    'flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-lg)] text-sm transition-all duration-200',
+                    'flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-md)] text-sm border transition-colors',
                     theme === t
-                      ? 'text-[var(--accent)]'
-                      : 'text-[var(--text-secondary)]'
+                      ? 'bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent)]'
+                      : 'text-[var(--text-secondary)] border-[var(--border-default)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-2)]'
                   )}
-                  style={{
-                    background: theme === t ? 'rgba(56,189,248,0.08)' : 'rgba(255,255,255,0.03)',
-                    border: theme === t ? '1px solid rgba(56,189,248,0.3)' : '1px solid rgba(255,255,255,0.08)',
-                    boxShadow: theme === t ? '0 0 16px rgba(56,189,248,0.15), inset 0 0 20px rgba(56,189,248,0.05)' : undefined,
-                    backdropFilter: 'blur(8px)',
-                    WebkitBackdropFilter: 'blur(8px)',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (theme !== t) {
-                      e.currentTarget.style.borderColor = 'rgba(56,189,248,0.15)'
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (theme !== t) {
-                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.03)'
-                    }
-                  }}
                 >
                   {t === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
                   <span className="capitalize">{t}</span>
@@ -117,9 +86,9 @@ export default function Settings() {
       </section>
 
       {/* Connection */}
-      <section className="pt-8" style={sectionDivider}>
+      <section className="pt-8 border-t border-[var(--border-default)]">
         <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">Connection</h2>
-        <p className="text-xs text-[var(--text-muted)] mb-4">Configure the Hermes Agent backend connection.</p>
+        <p className="text-xs text-[var(--text-tertiary)] mb-4">Configure the Hermes Agent backend connection.</p>
 
         <div className="space-y-4">
           <div>
@@ -130,19 +99,7 @@ export default function Settings() {
                 value={apiUrl}
                 onChange={(e) => setApiUrl(e.target.value)}
                 placeholder="http://127.0.0.1:9119"
-                className="flex-1 h-9 px-3 rounded-[var(--radius-md)] text-sm font-[var(--font-mono)] text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:outline-none transition-all duration-200"
-                style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(56,189,248,0.3)'
-                  e.currentTarget.style.boxShadow = '0 0 12px rgba(56,189,248,0.1)'
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
-                  e.currentTarget.style.boxShadow = 'none'
-                }}
+                className="flex-1 h-8 px-3 rounded-[var(--radius-md)] text-sm font-[var(--font-mono)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] bg-[var(--bg-surface-2)] border border-[var(--border-default)] focus:border-[var(--border-focus)] focus:outline-none focus:ring-1 focus:ring-[var(--border-focus)]/20 transition-colors"
               />
               <Button onClick={saveConnection} disabled={connectionState === 'testing'}>
                 {connectionState === 'testing' ? (
@@ -152,17 +109,17 @@ export default function Settings() {
                 )}
               </Button>
             </div>
-            <p className="mt-1.5 text-[10px] text-[var(--text-muted)]">
+            <p className="mt-1.5 text-[10px] text-[var(--text-tertiary)]">
               The URL where your Hermes Agent Dashboard API is running.
             </p>
             {connectionState === 'connected' && connectedVersion && (
-              <div className="mt-2 flex items-center gap-1.5 text-xs text-[#34d399]">
+              <div className="mt-2 flex items-center gap-1.5 text-xs text-[var(--success)]">
                 <CheckCircle size={14} />
                 <span>Connected — Hermes v{connectedVersion}</span>
               </div>
             )}
             {connectionState === 'failed' && connectionError && (
-              <div className="mt-2 flex items-center gap-1.5 text-xs text-[#f87171]">
+              <div className="mt-2 flex items-center gap-1.5 text-xs text-[var(--danger)]">
                 <XCircle size={14} />
                 <span>{connectionError}</span>
               </div>
@@ -173,14 +130,11 @@ export default function Settings() {
 
       {/* Agent Info (from /api/status) */}
       {status && (
-        <section className="pt-8" style={sectionDivider}>
+        <section className="pt-8 border-t border-[var(--border-default)]">
           <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">Agent Info</h2>
-          <p className="text-xs text-[var(--text-muted)] mb-4">Live information from the connected Hermes Agent.</p>
+          <p className="text-xs text-[var(--text-tertiary)] mb-4">Live information from the connected Hermes Agent.</p>
 
-          <div
-            className="rounded-[var(--radius-lg)] divide-y divide-[rgba(255,255,255,0.04)] overflow-hidden"
-            style={glassStyle}
-          >
+          <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] divide-y divide-[var(--border-default)] overflow-hidden">
             {[
               ['Agent Version', status.version],
               ['Release Date', status.release_date],
@@ -192,10 +146,10 @@ export default function Settings() {
             ].map(([label, val]) => (
               <div key={String(label)} className="flex items-center justify-between px-4 py-3">
                 <span className="text-sm text-[var(--text-secondary)]">{label}</span>
-                <span className="text-sm font-[var(--font-mono)] text-[var(--text-primary)] truncate max-w-[300px]" style={{ textShadow: 'var(--text-glow-accent)' }}>
+                <span className="text-sm font-[var(--font-mono)] text-[var(--text-primary)] truncate max-w-[300px]">
                   {String(val)}
                   {label === 'Config Version' && status.config_version !== status.latest_config_version && (
-                    <span className="ml-2 text-xs text-[#fbbf24]">(latest: {status.latest_config_version})</span>
+                    <span className="ml-2 text-xs text-[var(--warning)]">(latest: {status.latest_config_version})</span>
                   )}
                 </span>
               </div>
@@ -205,45 +159,28 @@ export default function Settings() {
       )}
 
       {/* Config (from /api/config) */}
-      <section className="pt-8" style={sectionDivider}>
+      <section className="pt-8 border-t border-[var(--border-default)]">
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-semibold text-[var(--text-primary)]">Configuration</h2>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.06] text-[var(--text-muted)] font-medium uppercase tracking-wider">
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--bg-surface-2)] text-[var(--text-tertiary)] font-medium uppercase tracking-wider">
               Read-only
             </span>
           </div>
-          {configLoading && <RefreshCw size={14} className="text-[var(--text-muted)] animate-spin" />}
+          {configLoading && <RefreshCw size={14} className="text-[var(--text-tertiary)] animate-spin" />}
         </div>
-        <p className="text-xs text-[var(--text-muted)] mb-4">Raw configuration from the Hermes Agent. Edit via the config file directly.</p>
+        <p className="text-xs text-[var(--text-tertiary)] mb-4">Raw configuration from the Hermes Agent. Edit via the config file directly.</p>
 
         {config ? (
-          <div
-            className="relative rounded-[var(--radius-lg)] overflow-auto max-h-[400px]"
-            style={{
-              background: '#020204',
-              border: '1px solid rgba(255,255,255,0.06)',
-            }}
-          >
-            {/* Top gradient fade */}
-            <div className="pointer-events-none sticky top-0 left-0 right-0 h-4 z-10 bg-gradient-to-b from-[#020204] to-transparent" />
-            {/* Scanlines */}
-            <div
-              className="pointer-events-none absolute inset-0 z-5"
-              style={{
-                backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.006) 2px, rgba(255,255,255,0.006) 4px)',
-              }}
-            />
-            <div className="px-4 pb-4">
+          <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-muted)] overflow-auto max-h-[400px]">
+            <div className="px-4 py-3">
               <pre className="text-xs font-[var(--font-mono)] text-[var(--text-primary)] whitespace-pre-wrap leading-6">
                 {JSON.stringify(config, null, 2).split('\n').map((line, i) => (
                   <div
                     key={i}
-                    className="flex"
-                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)' }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+                    className="flex hover:bg-[var(--bg-surface-2)] transition-colors"
                   >
-                    <span className="inline-block w-[36px] text-right pr-3 select-none shrink-0" style={{ fontVariantNumeric: 'tabular-nums', color: 'rgba(255,255,255,0.15)' }}>{i + 1}</span>
+                    <span className="inline-block w-[36px] text-right pr-3 select-none shrink-0 text-[var(--text-tertiary)]" style={{ fontVariantNumeric: 'tabular-nums' }}>{i + 1}</span>
                     <span>{line}</span>
                   </div>
                 ))}
@@ -251,24 +188,21 @@ export default function Settings() {
             </div>
           </div>
         ) : (
-          <div className="text-sm text-[var(--text-muted)]">
+          <div className="text-sm text-[var(--text-tertiary)]">
             {configLoading ? 'Loading configuration...' : 'Unable to load configuration. Is the agent running?'}
           </div>
         )}
       </section>
 
       {/* About */}
-      <section className="pt-8" style={sectionDivider}>
+      <section className="pt-8 border-t border-[var(--border-default)]">
         <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">About</h2>
-        <p className="text-xs text-[var(--text-muted)] mb-4">Hermes Dashboard v0.1.0</p>
+        <p className="text-xs text-[var(--text-tertiary)] mb-4">Hermes Dashboard v0.1.0</p>
 
-        <div
-          className="rounded-[var(--radius-lg)] divide-y divide-[rgba(255,255,255,0.04)] overflow-hidden"
-          style={glassStyle}
-        >
+        <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] divide-y divide-[var(--border-default)] overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3">
             <span className="text-sm text-[var(--text-secondary)]">Dashboard Version</span>
-            <span className="text-sm font-[var(--font-mono)] text-[var(--text-primary)]" style={{ textShadow: 'var(--text-glow-accent)' }}>0.1.0</span>
+            <span className="text-sm font-[var(--font-mono)] text-[var(--text-primary)]">0.1.0</span>
           </div>
           <div className="flex items-center justify-between px-4 py-3">
             <span className="text-sm text-[var(--text-secondary)]">License</span>

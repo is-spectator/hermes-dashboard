@@ -39,50 +39,39 @@ export default function SideDrawer({ open, onClose, title, children, width = '48
 
   return (
     <>
-      {/* Backdrop with heavy blur */}
+      {/* Backdrop */}
       <div
-        className="fixed inset-0 z-50 transition-opacity animate-[fade-in-up_150ms_ease-out]"
-        style={{
-          background: 'rgba(0,0,0,0.6)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-        }}
+        className="fixed inset-0 z-50 bg-black/50 animate-[fade-in_150ms_ease-out]"
         onClick={onClose}
         aria-hidden="true"
       />
-      {/* Drawer panel -- glass */}
+      {/* Drawer panel */}
       <div
         ref={drawerRef}
         role="dialog"
         aria-modal="true"
         aria-label={title || 'Side drawer'}
-        className="fixed top-0 right-0 z-50 h-screen overflow-y-auto"
+        className="fixed top-0 right-0 z-50 h-screen overflow-y-auto bg-[var(--bg-surface)] border-l border-[var(--border-default)]"
         style={{
           width,
-          background: 'rgba(10,10,20,0.95)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          borderLeft: '1px solid rgba(56,189,248,0.1)',
-          boxShadow: '-4px 0 30px rgba(0,0,0,0.5), -1px 0 0 rgba(56,189,248,0.05)',
-          animation: 'drawer-in 300ms cubic-bezier(0.34, 1.56, 0.64, 1)',
+          boxShadow: 'var(--shadow-md)',
+          transform: 'translateX(0)',
+          transition: 'transform 200ms ease-out',
         }}
       >
-        {/* Top gradient overlay */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-16 z-10 bg-gradient-to-b from-[rgba(10,10,20,0.95)] to-transparent" />
-
         {title && (
-          <div className="relative z-20 flex items-center justify-between px-5 py-4 border-b border-[rgba(255,255,255,0.06)]">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-default)]">
             <h2 className="text-sm font-semibold text-[var(--text-primary)]">{title}</h2>
             <button
               onClick={onClose}
               aria-label="Close drawer"
-              className="p-1.5 rounded-[var(--radius-md)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:bg-white/[0.04] transition-colors"
+              className="p-1.5 rounded-[var(--radius-md)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-surface-2)] transition-colors"
             >
               <X size={16} />
             </button>
           </div>
         )}
-        <div className="relative z-20 p-5">{children}</div>
+        <div className="p-5">{children}</div>
       </div>
     </>
   )

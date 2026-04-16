@@ -7,19 +7,8 @@ export default function Cron() {
 
   return (
     <div className="space-y-6">
-      <div
-        className="rounded-[var(--radius-lg)] p-8 text-center"
-        style={{
-          background: 'var(--glass-bg)',
-          backdropFilter: 'var(--glass-blur)',
-          WebkitBackdropFilter: 'var(--glass-blur)',
-          border: 'var(--glass-border)',
-        }}
-      >
-        <div
-          className="mx-auto w-12 h-12 rounded-[var(--radius-md)] flex items-center justify-center mb-4"
-          style={{ background: 'var(--accent-subtle)' }}
-        >
+      <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-8 text-center">
+        <div className="mx-auto w-12 h-12 rounded-[var(--radius-md)] flex items-center justify-center mb-4 bg-[var(--accent-soft)]">
           <Clock size={22} className="text-[var(--accent)]" />
         </div>
 
@@ -40,9 +29,7 @@ export default function Cron() {
           . This feature may be added in a future release.
         </p>
 
-        <div
-          className="inline-flex items-center gap-1.5 text-[11px] text-[var(--text-muted)]"
-        >
+        <div className="inline-flex items-center gap-1.5 text-[11px] text-[var(--text-tertiary)]">
           <ExternalLink size={11} className="shrink-0" />
           <span>
             See the{' '}

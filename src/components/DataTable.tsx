@@ -30,15 +30,7 @@ export default function DataTable<T>({
 }: DataTableProps<T>) {
   if (loading) {
     return (
-      <div
-        className="rounded-[var(--radius-lg)] overflow-hidden"
-        style={{
-          background: 'rgba(255,255,255,0.03)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          border: '1px solid rgba(255,255,255,0.08)',
-        }}
-      >
+      <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] overflow-hidden">
         <div className="p-4 space-y-3">
           {Array.from({ length: 5 }).map((_, i) => (
             <SkeletonLoader key={i} className="h-10 w-full" />
@@ -50,61 +42,38 @@ export default function DataTable<T>({
 
   if (data.length === 0) {
     return (
-      <div
-        className="rounded-[var(--radius-lg)] p-12"
-        style={{
-          background: 'rgba(255,255,255,0.03)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          border: '1px solid rgba(255,255,255,0.08)',
-        }}
-      >
+      <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-12">
         <EmptyState message={emptyMessage} icon={emptyIcon} />
       </div>
     )
   }
 
   return (
-    <div
-      className="rounded-[var(--radius-lg)] overflow-hidden"
-      style={{
-        background: 'rgba(255,255,255,0.03)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        border: '1px solid rgba(255,255,255,0.08)',
-      }}
-    >
+    <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full" aria-label="Data table">
           <thead>
-            <tr className="relative" style={{ background: 'rgba(255,255,255,0.04)' }}>
+            <tr className="bg-[var(--bg-surface-2)]">
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  className="px-4 py-3 text-left text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--text-muted)]"
+                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-[var(--text-tertiary)]"
                   style={col.width ? { width: col.width } : undefined}
                 >
                   {col.header}
                 </th>
               ))}
-              {/* Bottom neon gradient line */}
-              <th className="absolute inset-x-0 bottom-0 h-[1px] p-0 border-0" aria-hidden="true">
-                <div className="h-full bg-gradient-to-r from-[var(--accent)]/15 via-[rgba(255,255,255,0.04)] to-transparent" />
-              </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[rgba(255,255,255,0.04)]">
-            {data.map((row, index) => (
+          <tbody>
+            {data.map((row) => (
               <tr
                 key={rowKey(row)}
                 onClick={() => onRowClick?.(row)}
                 className={cn(
-                  'group relative transition-all duration-200',
-                  onRowClick && 'cursor-pointer'
+                  'border-b border-[var(--border-default)] transition-colors duration-100',
+                  onRowClick && 'cursor-pointer hover:bg-[var(--bg-surface-2)]'
                 )}
-                style={{
-                  animation: `fade-in-up 200ms ease-out ${index * 30}ms both`,
-                }}
                 {...(onRowClick ? {
                   role: 'button' as const,
                   tabIndex: 0,
@@ -115,19 +84,7 @@ export default function DataTable<T>({
                     }
                   },
                 } : {})}
-                onMouseEnter={(e) => {
-                  if (onRowClick) {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent'
-                }}
               >
-                {/* Hover neon left border slide */}
-                <td className="absolute left-0 top-0 bottom-0 w-0 p-0 border-0 overflow-hidden group-hover:w-[3px] transition-all duration-200" aria-hidden="true">
-                  <div className="h-full bg-[var(--accent)]" style={{ boxShadow: '2px 0 8px rgba(56,189,248,0.3)' }} />
-                </td>
                 {columns.map((col) => (
                   <td key={col.key} className="px-4 py-3 text-sm text-[var(--text-primary)]">
                     {col.render(row)}

@@ -10,7 +10,7 @@ export default function PageTransition({ children }: PageTransitionProps) {
   return (
     <div
       key={location.pathname}
-      className="animate-[fade-in-up_150ms_ease-out]"
+      className="animate-[fade-in_150ms_ease-out]"
     >
       {children}
     </div>

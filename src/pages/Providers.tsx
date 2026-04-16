@@ -118,7 +118,7 @@ export default function Providers() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20 text-sm text-[var(--text-muted)]">
+      <div className="flex items-center justify-center py-20 text-sm text-[var(--text-tertiary)]">
         Loading providers...
       </div>
     )
@@ -127,13 +127,8 @@ export default function Providers() {
   if (error) {
     return (
       <div className="space-y-6">
-        <div className="rounded-[var(--radius-lg)] p-8 text-center"
-          style={{
-            background: 'rgba(248,113,113,0.04)',
-            border: '1px solid rgba(248,113,113,0.15)',
-          }}
-        >
-          <AlertCircle size={36} className="mx-auto text-[#f87171] mb-4 opacity-80" />
+        <div className="rounded-[var(--radius-md)] border border-[var(--danger)]/20 bg-[var(--danger-soft)] p-8 text-center">
+          <AlertCircle size={36} className="mx-auto text-[var(--danger)] mb-4 opacity-80" />
           <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">
             Failed to load providers
           </h2>
@@ -155,24 +150,16 @@ export default function Providers() {
           placeholder="Search providers..."
           className="w-64"
         />
-        <div
-          className="flex rounded-[var(--radius-md)] overflow-hidden"
-          style={{
-            border: '1px solid rgba(255,255,255,0.08)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-          }}
-        >
+        <div className="flex rounded-[var(--radius-md)] overflow-hidden border border-[var(--border-default)]">
           {filters.map((f) => (
             <button
               key={f.value}
               onClick={() => setFilter(f.value)}
-              className={`px-3 py-1.5 text-xs font-medium transition-all duration-200 ${
+              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
                 filter === f.value
                   ? 'bg-[var(--accent)] text-white'
-                  : 'text-[var(--text-secondary)] hover:bg-white/[0.04] hover:text-[var(--text-primary)]'
+                  : 'text-[var(--text-secondary)] hover:bg-[var(--bg-surface-2)] hover:text-[var(--text-primary)]'
               }`}
-              style={filter === f.value ? { boxShadow: '0 0 12px rgba(56,189,248,0.2)' } : undefined}
             >
               {f.label}
             </button>
@@ -183,7 +170,7 @@ export default function Providers() {
       {/* API Key Providers */}
       {filteredProviders.length > 0 && (
         <section>
-          <h2 className="text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--text-muted)] mb-3">
+          <h2 className="text-xs font-medium uppercase tracking-wide text-[var(--text-tertiary)] mb-3">
             API Key Providers
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -209,7 +196,7 @@ export default function Providers() {
       {/* Other Environment Variables */}
       {filteredOther.length > 0 && (
         <section>
-          <h2 className="text-[10px] font-medium uppercase tracking-[0.15em] text-[var(--text-muted)] mb-3">
+          <h2 className="text-xs font-medium uppercase tracking-wide text-[var(--text-tertiary)] mb-3">
             Other Environment Variables
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -233,7 +220,7 @@ export default function Providers() {
       )}
 
       {filteredProviders.length === 0 && filteredOther.length === 0 && (
-        <div className="text-center py-12 text-sm text-[var(--text-muted)]">
+        <div className="text-center py-12 text-sm text-[var(--text-tertiary)]">
           No environment variables match the current filter
         </div>
       )}

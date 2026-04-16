@@ -19,10 +19,10 @@ interface ParsedLogLine {
 const MAX_DISPLAY_LINES = 500
 
 const levelColors: Record<LogLevel, string> = {
-  DEBUG: 'text-[var(--text-muted)]',
+  DEBUG: 'text-[var(--text-tertiary)]',
   INFO: 'text-[var(--text-primary)]',
-  WARN: 'text-[#fbbf24]',
-  ERROR: 'text-[#f87171]',
+  WARN: 'text-[var(--warning)]',
+  ERROR: 'text-[var(--danger)]',
 }
 
 // Regex for structured log lines:
@@ -149,37 +149,23 @@ export default function Logs() {
     }
   }, [filtered, autoScroll])
 
-  const levelBtnStyle = (level: LogLevel | 'ALL') => {
+  const levelBtnClass = (level: LogLevel | 'ALL') => {
     const active = activeLevels.has(level)
     if (!active) {
-      return {
-        background: 'transparent',
-        border: '1px solid rgba(255,255,255,0.06)',
-        color: 'var(--text-muted)',
-        opacity: 0.5,
-      }
+      return 'border border-[var(--border-default)] text-[var(--text-tertiary)] opacity-50 bg-transparent'
     }
-    if (level === 'ERROR') return { background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.2)', color: '#f87171' }
-    if (level === 'WARN') return { background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.2)', color: '#fbbf24' }
-    if (level === 'DEBUG') return { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'var(--text-muted)' }
-    return { background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', color: '#38bdf8' }
+    if (level === 'ERROR') return 'bg-[var(--danger-soft)] border border-[var(--danger)]/20 text-[var(--danger)]'
+    if (level === 'WARN') return 'bg-[var(--warning-soft)] border border-[var(--warning)]/20 text-[var(--warning)]'
+    if (level === 'DEBUG') return 'bg-[var(--bg-surface-2)] border border-[var(--border-default)] text-[var(--text-tertiary)]'
+    return 'bg-[var(--accent-soft)] border border-[var(--accent)]/20 text-[var(--accent)]'
   }
 
-  const fileBtnStyle = (file: LogFile) => {
+  const fileBtnClass = (file: LogFile) => {
     const active = logFile === file
     if (!active) {
-      return {
-        background: 'transparent',
-        border: '1px solid rgba(255,255,255,0.06)',
-        color: 'var(--text-muted)',
-        opacity: 0.6,
-      }
+      return 'border border-[var(--border-default)] text-[var(--text-tertiary)] opacity-60 bg-transparent'
     }
-    return {
-      background: 'rgba(139,92,246,0.1)',
-      border: '1px solid rgba(139,92,246,0.25)',
-      color: '#a78bfa',
-    }
+    return 'bg-[var(--accent-soft)] border border-[var(--accent)]/20 text-[var(--accent)]'
   }
 
   const totalLines = logsData?.lines?.length ?? 0
@@ -195,8 +181,7 @@ export default function Logs() {
             <button
               key={file}
               onClick={() => setLogFile(file)}
-              className="px-2.5 py-1 text-xs font-medium rounded-[var(--radius-sm)] transition-all duration-200 capitalize"
-              style={fileBtnStyle(file)}
+              className={cn('px-2.5 py-1 text-xs font-medium rounded-[var(--radius-sm)] transition-colors capitalize', fileBtnClass(file))}
             >
               {file}
             </button>
@@ -204,7 +189,7 @@ export default function Logs() {
         </div>
 
         {/* Separator */}
-        <div className="w-px h-5 bg-white/10" />
+        <div className="w-px h-5 bg-[var(--border-default)]" />
 
         {/* Level filters */}
         <div className="flex items-center gap-1.5">
@@ -212,8 +197,7 @@ export default function Logs() {
             <button
               key={level}
               onClick={() => toggleLevel(level)}
-              className="px-2.5 py-1 text-xs font-medium rounded-[var(--radius-sm)] transition-all duration-200"
-              style={levelBtnStyle(level)}
+              className={cn('px-2.5 py-1 text-xs font-medium rounded-[var(--radius-sm)] transition-colors', levelBtnClass(level))}
             >
               {level}
             </button>
@@ -222,52 +206,33 @@ export default function Logs() {
         <SearchInput value={search} onChange={setSearch} placeholder="Filter logs..." className="w-64" />
         <button
           onClick={() => setAutoScroll(!autoScroll)}
-          className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-[var(--radius-md)] transition-all duration-200"
-          style={{
-            background: autoScroll ? 'rgba(56,189,248,0.1)' : 'transparent',
-            border: autoScroll ? '1px solid rgba(56,189,248,0.2)' : '1px solid rgba(255,255,255,0.08)',
-            color: autoScroll ? '#38bdf8' : 'var(--text-muted)',
-            boxShadow: autoScroll ? '0 0 8px rgba(56,189,248,0.1)' : undefined,
-          }}
+          className={cn(
+            'ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-[var(--radius-md)] border transition-colors',
+            autoScroll
+              ? 'bg-[var(--accent-soft)] border-[var(--accent)]/20 text-[var(--accent)]'
+              : 'bg-transparent border-[var(--border-default)] text-[var(--text-tertiary)]'
+          )}
         >
           <ArrowDown size={12} /> Auto-scroll
         </button>
       </div>
 
-      {/* Log View -- Terminal with scanlines */}
-      <div
-        className="relative flex-1 rounded-[var(--radius-lg)] overflow-hidden"
-        style={{
-          border: '1px solid rgba(255,255,255,0.06)',
-          background: '#020204',
-        }}
-      >
-        {/* Scan-line effect */}
-        <div
-          className="pointer-events-none absolute inset-0 z-10"
-          style={{
-            backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.008) 2px, rgba(255,255,255,0.008) 4px)',
-            backgroundSize: '100% 4px',
-          }}
-        />
-        {/* Top gradient fade */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-8 z-10 bg-gradient-to-b from-[#020204] to-transparent" />
-
+      {/* Log View */}
+      <div className="relative flex-1 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-muted)] overflow-hidden">
         <div
           ref={containerRef}
           className="h-full overflow-y-auto font-[var(--font-mono)] text-xs leading-6"
-          style={{ background: '#020204' }}
         >
           {isLoading && (
-            <div className="flex items-center justify-center h-full text-[var(--text-muted)]">
+            <div className="flex items-center justify-center h-full text-[var(--text-tertiary)]">
               Loading logs...
             </div>
           )}
 
           {!isLoading && isError && (
-            <div className="flex flex-col items-center justify-center h-full gap-3 text-[var(--text-muted)]">
-              <AlertTriangle size={24} className="text-[#f87171]" />
-              <span className="text-sm text-[#f87171]">Failed to load logs</span>
+            <div className="flex flex-col items-center justify-center h-full gap-3 text-[var(--text-tertiary)]">
+              <AlertTriangle size={24} className="text-[var(--danger)]" />
+              <span className="text-sm text-[var(--danger)]">Failed to load logs</span>
               <span className="text-xs max-w-md text-center">
                 {error instanceof Error ? error.message : 'Could not connect to the Hermes Agent API. Check that the agent is running.'}
               </span>
@@ -278,27 +243,17 @@ export default function Logs() {
             <div
               key={log.id}
               className={cn(
-                'flex px-4 transition-colors duration-100',
+                'flex px-4 hover:bg-[var(--bg-surface-2)] transition-colors',
+                log.level === 'ERROR' && 'bg-[var(--danger-soft)] border-l-2 border-l-[var(--danger)]'
               )}
-              style={{
-                background: log.level === 'ERROR' ? 'rgba(248,113,113,0.04)' : undefined,
-                borderLeft: log.level === 'ERROR' ? '3px solid #f87171' : '3px solid transparent',
-                boxShadow: log.level === 'ERROR' ? 'inset 4px 0 12px rgba(248,113,113,0.06)' : undefined,
-              }}
-              onMouseEnter={(e) => {
-                if (log.level !== 'ERROR') e.currentTarget.style.background = 'rgba(255,255,255,0.02)'
-              }}
-              onMouseLeave={(e) => {
-                if (log.level !== 'ERROR') e.currentTarget.style.background = 'transparent'
-              }}
             >
               {/* Line number */}
-              <span className="shrink-0 w-[40px] text-right pr-3 select-none" style={{ fontVariantNumeric: 'tabular-nums', color: 'rgba(255,255,255,0.15)' }}>
+              <span className="shrink-0 w-[40px] text-right pr-3 select-none text-[var(--text-tertiary)]" style={{ fontVariantNumeric: 'tabular-nums' }}>
                 {log.id + 1}
               </span>
               {/* Formatted: [HH:MM:SS] [LEVEL] [module] message */}
               {log.time && (
-                <span className="shrink-0 text-[var(--text-muted)] mr-2" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                <span className="shrink-0 text-[var(--text-tertiary)] mr-2" style={{ fontVariantNumeric: 'tabular-nums' }}>
                   [{log.time}]
                 </span>
               )}
@@ -308,7 +263,7 @@ export default function Logs() {
                 </span>
               )}
               {log.module && (
-                <span className="shrink-0 text-[var(--text-muted)] mr-2">
+                <span className="shrink-0 text-[var(--text-tertiary)] mr-2">
                   [{log.module}]
                 </span>
               )}
@@ -325,7 +280,7 @@ export default function Logs() {
           ))}
 
           {!isLoading && !isError && filtered.length === 0 && (
-            <div className="flex items-center justify-center h-full text-[var(--text-muted)]">
+            <div className="flex items-center justify-center h-full text-[var(--text-tertiary)]">
               No logs match the current filter
             </div>
           )}
@@ -333,7 +288,7 @@ export default function Logs() {
       </div>
 
       {/* Status bar */}
-      <div className="mt-2 flex items-center justify-between text-[10px] text-[var(--text-muted)]">
+      <div className="mt-2 flex items-center justify-between text-[10px] text-[var(--text-tertiary)]">
         <span>
           {filtered.length} entries shown
           {isCapped && ` (capped at ${MAX_DISPLAY_LINES})`}
