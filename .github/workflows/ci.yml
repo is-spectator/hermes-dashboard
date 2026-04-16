@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npx eslint .
+
+      - name: Build
+        run: npm run build
+
+      - name: Check bundle size
+        run: |
+          JS_SIZE=$(stat -c%s dist/assets/index-*.js 2>/dev/null || stat -f%z dist/assets/index-*.js)
+          CSS_SIZE=$(stat -c%s dist/assets/index-*.css 2>/dev/null || stat -f%z dist/assets/index-*.css)
+          echo "JS bundle: $JS_SIZE bytes ($(( JS_SIZE / 1024 ))KB)"
+          echo "CSS bundle: $CSS_SIZE bytes ($(( CSS_SIZE / 1024 ))KB)"
+          # Fail if JS > 500KB uncompressed (roughly 120KB gzipped)
+          if [ "$JS_SIZE" -gt 512000 ]; then
+            echo "::error::JS bundle exceeds 500KB limit"
+            exit 1
+          fi

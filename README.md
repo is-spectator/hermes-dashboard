@@ -1,73 +1,106 @@
-# React + TypeScript + Vite
+# Hermes Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A visually refined, animation-driven alternative Dashboard for [Hermes Agent](https://github.com/NousResearch/hermes-agent).
 
-Currently, two official plugins are available:
+> **Status:** Early development (v0.1.0)  
+> **License:** MIT
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## What is this?
 
-## React Compiler
+Hermes Dashboard is an independent, third-party open-source project that provides a **Terminal-Luxury** styled admin dashboard for Hermes Agent. It connects to the existing Hermes FastAPI backend via HTTP API — no modifications to Hermes Agent required.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+**Design philosophy:** Linear's restraint + Vercel's technical taste + Raycast's dark aesthetic.
 
-## Expanding the ESLint configuration
+## Features
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **Overview** — Aggregated status dashboard with metric cards, gateway grid, activity feed
+- **Providers** — Redesigned key management with OAuth and API key provider cards
+- **Sessions** — Searchable session table with detail drawer
+- **Skills** — Card grid with category filters and enable/disable toggles
+- **Logs** — Terminal-style real-time log viewer with level filtering
+- **Cron** — Scheduled task management with create/edit/delete
+- **Gateways** — Connection status cards with breathing animations
+- **Settings** — Theme switching, API connection config, about info
+- **Dark / Light themes** — Design token driven, with reduced-motion support
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Tech Stack
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+| Layer | Choice |
+|-------|--------|
+| Framework | React 19 + TypeScript |
+| Styling | Tailwind CSS v4 + CSS Custom Properties |
+| Build | Vite 6 |
+| State | Zustand |
+| Data Fetching | TanStack Query |
+| Router | React Router v7 |
+| Icons | Lucide React |
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Quick Start
+
+```bash
+# Clone
+git clone https://github.com/is-spectator/hermes-dashboard.git
+cd hermes-dashboard
+
+# Install
+npm install
+
+# Dev (connects to Hermes at localhost:9119 by default)
+npm run dev
+
+# Build
+npm run build
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Configure API endpoint
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+By default, the dev server proxies `/api/*` to `http://127.0.0.1:9119`. To change this:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+1. Set `VITE_HERMES_API_URL` environment variable, or
+2. Configure it in Dashboard Settings page
+
+## Integration with Hermes Agent
+
+### Mode A — Standalone (Recommended)
+
+Run as a separate process, proxy API calls to Hermes:
+
 ```
+Browser --> hermes-dashboard (localhost:3000)
+               |
+               └── /api/* --proxy--> Hermes FastAPI (localhost:9119)
+```
+
+### Mode B — Replace official frontend
+
+Build and copy output to Hermes web_dist:
+
+```bash
+npm run build
+cp -r dist/* ~/.hermes/hermes-agent/hermes_cli/web_dist/
+```
+
+> Note: `hermes update` will overwrite this. Mode A is recommended.
+
+## Performance Budget
+
+| Metric | Target | Actual |
+|--------|--------|--------|
+| JS Bundle (gzipped) | < 120KB | ~96KB |
+| CSS (gzipped) | < 15KB | ~7.7KB |
+
+## Compatibility
+
+Designed and tested against Hermes Agent v0.9.x. API endpoints may change between Hermes versions.
+
+## Contributing
+
+Contributions welcome! Please open an issue first to discuss what you'd like to change.
+
+## License
+
+[MIT](LICENSE)
+
+## Disclaimer
+
+This project is not affiliated with Nous Research or the Hermes Agent team. It is an independent community project.
