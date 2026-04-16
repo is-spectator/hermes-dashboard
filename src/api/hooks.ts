@@ -31,7 +31,8 @@ export function useEnv() {
 export function useUpdateEnv() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: api.updateEnv,
+    mutationFn: ({ key, value }: { key: string; value: string }) =>
+      api.updateEnv(key, value),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['env'] }),
   })
 }

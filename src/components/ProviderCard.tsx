@@ -37,6 +37,17 @@ export default function ProviderCard({
 }: ProviderCardProps) {
   const [expanded, setExpanded] = useState(false)
   const [newKey, setNewKey] = useState('')
+  const [submitted, setSubmitted] = useState(false)
+
+  // Clear input only on successful save (submitted + loading finished + no error)
+  if (submitted && !addKeyLoading && !error) {
+    setNewKey('')
+    setSubmitted(false)
+  }
+  // Reset submitted flag on error so user can retry
+  if (submitted && !addKeyLoading && error) {
+    setSubmitted(false)
+  }
 
   const glassStyle = {
     background: 'rgba(255,255,255,0.03)',
@@ -217,8 +228,8 @@ export default function ProviderCard({
               size="sm"
               disabled={!newKey.trim() || addKeyLoading}
               onClick={() => {
+                setSubmitted(true)
                 onAddKey?.(newKey)
-                setNewKey('')
               }}
             >
               {addKeyLoading ? (

@@ -23,7 +23,7 @@ export default function Providers() {
       setAddKeyLoadingFor(envKey)
       setErrorFor((prev) => ({ ...prev, [envKey]: '' }))
       updateEnv.mutate(
-        { [envKey]: value },
+        { key: envKey, value },
         {
           onSuccess: () => {
             setAddKeyLoadingFor(null)

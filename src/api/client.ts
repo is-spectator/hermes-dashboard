@@ -9,11 +9,15 @@ import type {
 } from './types'
 
 /**
- * Resolve the Hermes API base URL at call time so that changes from Settings
- * take effect immediately without a page reload.
+ * Get the base URL prefix for API requests.
+ * In dev mode with Vite proxy, this is '' (empty) — the proxy handles routing.
+ * In production or when user configures a custom URL, returns the full URL.
  */
 function getBaseUrl(): string {
-  return localStorage.getItem('hermes-api-url') || import.meta.env.VITE_HERMES_API_URL || ''
+  const stored = localStorage.getItem('hermes-api-url')
+  // If user hasn't customized, use env var or empty (for Vite proxy)
+  if (!stored) return import.meta.env.VITE_HERMES_API_URL || ''
+  return stored
 }
 
 // ---------------------------------------------------------------------------
@@ -103,11 +107,20 @@ async function request<T>(
   }
 
   const baseUrl = getBaseUrl()
-  const res = await fetch(`${baseUrl}${path}`, {
-    ...options,
-    headers,
-    signal: options?.signal ?? AbortSignal.timeout(10_000),
-  })
+
+  let res: Response
+  try {
+    res = await fetch(`${baseUrl}${path}`, {
+      ...options,
+      headers,
+      signal: options?.signal ?? AbortSignal.timeout(10_000),
+    })
+  } catch (err) {
+    if (err instanceof TypeError) {
+      throw new Error('Network error — is Hermes Agent running?')
+    }
+    throw err
+  }
 
   // --- Handle 401/403: clear token and retry once -------------------------
   if ((res.status === 401 || res.status === 403) && !isRetry) {
@@ -119,11 +132,29 @@ async function request<T>(
     }
   }
 
+  // --- Read error body before throwing ------------------------------------
   if (!res.ok) {
-    throw new Error(`API error: ${res.status} ${res.statusText}`)
+    let errorMessage = `${res.status} ${res.statusText}`
+    try {
+      const ct = res.headers.get('content-type') || ''
+      if (ct.includes('application/json')) {
+        const errorBody = await res.json()
+        // Hermes returns {"detail": [{msg: "..."}]}
+        if (errorBody.detail && Array.isArray(errorBody.detail)) {
+          errorMessage = errorBody.detail.map((d: { msg?: string }) => d.msg).join('; ')
+        } else if (errorBody.message) {
+          errorMessage = errorBody.message
+        }
+      } else {
+        errorMessage = (await res.text()) || errorMessage
+      }
+    } catch {
+      /* keep original status message */
+    }
+    throw new Error(errorMessage)
   }
 
-  // --- Handle 204 No Content ----------------------------------------------
+  // --- Handle 204 No Content (before content-type guard) ------------------
   if (res.status === 204) {
     return undefined as T
   }
@@ -150,14 +181,23 @@ export const api = {
   // Config
   getConfig: () => request<Config>('/api/config'),
   updateConfig: (config: Partial<Config>) =>
-    request<Config>('/api/config', { method: 'PUT', body: JSON.stringify(config) }),
+    request<{ ok: boolean }>('/api/config', {
+      method: 'PUT',
+      body: JSON.stringify({ config }),
+    }),
 
   // Env / Keys — returns Record<string, EnvVariable>
   getEnv: () => request<EnvResponse>('/api/env'),
-  updateEnv: (env: Record<string, string>) =>
-    request<void>('/api/env', { method: 'PUT', body: JSON.stringify(env) }),
+  updateEnv: (key: string, value: string) =>
+    request<{ ok: boolean; key: string }>('/api/env', {
+      method: 'PUT',
+      body: JSON.stringify({ key, value }),
+    }),
   deleteEnvKey: (key: string) =>
-    request<void>('/api/env', { method: 'DELETE', body: JSON.stringify({ key }) }),
+    request<{ ok: boolean; key: string }>('/api/env', {
+      method: 'DELETE',
+      body: JSON.stringify({ key }),
+    }),
 
   // Sessions — returns { sessions: Session[] }
   getSessions: (params?: { search?: string; source?: string }) => {
