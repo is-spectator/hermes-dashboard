@@ -1,4 +1,5 @@
-import { AlertCircle } from 'lucide-react'
+import { Clock, ExternalLink } from 'lucide-react'
+import Badge from '../components/Badge'
 import { useStatus } from '../api/hooks'
 
 export default function Cron() {
@@ -9,24 +10,46 @@ export default function Cron() {
       <div
         className="rounded-[var(--radius-lg)] p-8 text-center"
         style={{
-          background: 'rgba(255,255,255,0.03)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          border: '1px solid rgba(255,255,255,0.08)',
+          background: 'var(--glass-bg)',
+          backdropFilter: 'var(--glass-blur)',
+          WebkitBackdropFilter: 'var(--glass-blur)',
+          border: 'var(--glass-border)',
         }}
       >
-        <AlertCircle size={40} className="mx-auto text-[var(--text-muted)] mb-4" />
-        <h2 className="text-lg font-semibold text-[var(--text-primary)] mb-2">
-          Cron Jobs Not Available
+        <div
+          className="mx-auto w-12 h-12 rounded-[var(--radius-md)] flex items-center justify-center mb-4"
+          style={{ background: 'var(--accent-subtle)' }}
+        >
+          <Clock size={22} className="text-[var(--accent)]" />
+        </div>
+
+        <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">
+          Scheduled Tasks Not Available
         </h2>
-        <p className="text-sm text-[var(--text-secondary)] max-w-md mx-auto">
-          The Cron API endpoint is not available in Hermes Agent{' '}
-          {status?.version ? `v${status.version}` : ''}.
-          This feature may be added in a future release.
+
+        <p className="text-xs text-[var(--text-secondary)] max-w-sm mx-auto mb-4">
+          The Cron API endpoint is not supported in{' '}
+          {status?.version ? (
+            <>
+              Hermes Agent{' '}
+              <Badge variant="info" style="outline">v{status.version}</Badge>
+            </>
+          ) : (
+            'this version of Hermes Agent'
+          )}
+          . This feature may be added in a future release.
         </p>
-        <p className="text-xs text-[var(--text-muted)] mt-4">
-          Check the Hermes Agent documentation for updates on scheduled task support.
-        </p>
+
+        <div
+          className="inline-flex items-center gap-1.5 text-[11px] text-[var(--text-muted)]"
+        >
+          <ExternalLink size={11} className="shrink-0" />
+          <span>
+            See the{' '}
+            <span className="text-[var(--accent)] cursor-default">Hermes Agent docs</span>{' '}
+            for updates on scheduled task support
+          </span>
+        </div>
       </div>
     </div>
   )
