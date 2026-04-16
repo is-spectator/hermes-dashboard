@@ -3,15 +3,16 @@ import { Activity, Radio, Zap, MessageSquare, Clock, AlertCircle } from 'lucide-
 import MetricCard from '../components/MetricCard'
 import StatusDot from '../components/StatusDot'
 import Badge from '../components/Badge'
+import SkeletonLoader from '../components/SkeletonLoader'
 import { useStatus, useSkills, useSessions, useEnv } from '../api/hooks'
 
 export default function Overview() {
   const navigate = useNavigate()
 
   const { data: status, isLoading: statusLoading, error: statusError } = useStatus()
-  const { data: skills } = useSkills()
-  const { data: sessionsData } = useSessions()
-  const { data: envData } = useEnv()
+  const { data: skills, isLoading: skillsLoading } = useSkills()
+  const { data: sessionsData, isLoading: sessionsLoading, error: sessionsError } = useSessions()
+  const { data: envData, isLoading: envLoading, error: envError } = useEnv()
 
   const sessions = sessionsData?.sessions ?? []
 
@@ -24,10 +25,10 @@ export default function Overview() {
       }))
     : []
 
-  // Derive provider health from env data
+  // Derive provider health from env data -- only actual API keys
   const providerEntries = envData
     ? Object.entries(envData)
-        .filter(([, v]) => v.category === 'provider')
+        .filter(([, v]) => v.category === 'provider' && v.is_password)
         .map(([key, v]) => ({
           name: key.replace(/_API_KEY$/, '').replace(/_/g, ' '),
           envKey: key,
@@ -36,7 +37,6 @@ export default function Overview() {
     : []
 
   const totalMessages = sessions.reduce((a, s) => a + s.message_count, 0)
-  const activeSessions = sessions.filter((s) => s.is_active).length
   const enabledSkills = skills?.filter((s) => s.enabled).length ?? 0
 
   // Recent sessions as activity
@@ -44,7 +44,23 @@ export default function Overview() {
     .sort((a, b) => b.last_active - a.last_active)
     .slice(0, 8)
 
-  const agentOnline = !statusError && !!status
+  // Derive agent status: Online / Degraded / Offline
+  const connectedPlatforms = gatewayPlatforms.filter((p) => p.connected).length
+  const agentStatus: 'online' | 'degraded' | 'offline' = (() => {
+    if (statusError || !status) return 'offline'
+    // Gateway running but some platforms disconnected => degraded
+    if (
+      status.gateway_running &&
+      gatewayPlatforms.length > 0 &&
+      connectedPlatforms < gatewayPlatforms.length
+    ) {
+      return 'degraded'
+    }
+    return 'online'
+  })()
+
+  const agentStatusLabel =
+    agentStatus === 'online' ? 'Online' : agentStatus === 'degraded' ? 'Degraded' : 'Offline'
 
   return (
     <div className="space-y-6">
@@ -52,31 +68,54 @@ export default function Overview() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
           title="Agent Status"
-          value={statusLoading ? '...' : agentOnline ? 'Online' : 'Offline'}
-          icon={<StatusDot status={agentOnline ? 'online' : 'offline'} size="md" />}
+          value={statusLoading ? '...' : agentStatusLabel}
+          icon={<StatusDot status={statusLoading ? 'unknown' : agentStatus} size="md" />}
           subtitle={status ? `v${status.version}` : undefined}
+          loading={statusLoading}
           animate={false}
         />
         <MetricCard
           title="Total Messages"
           value={totalMessages}
           icon={<MessageSquare size={16} />}
-          subtitle={`${activeSessions} active session${activeSessions !== 1 ? 's' : ''}`}
+          subtitle="across all sessions"
+          loading={sessionsLoading}
         />
         <MetricCard
-          title="Gateway"
-          value={status?.gateway_running ? 'Running' : 'Stopped'}
+          title="Active Gateways"
+          value={statusLoading ? '...' : `${connectedPlatforms} / ${gatewayPlatforms.length}`}
           icon={<Radio size={16} />}
-          subtitle={`${gatewayPlatforms.length} platform${gatewayPlatforms.length !== 1 ? 's' : ''}`}
+          subtitle="connected / configured"
+          loading={statusLoading}
           animate={false}
         />
         <MetricCard
           title="Skills"
-          value={enabledSkills}
+          value={skillsLoading ? '...' : `${enabledSkills} / ${skills?.length ?? 0}`}
           icon={<Zap size={16} />}
-          subtitle={`${skills?.length ?? 0} total`}
+          subtitle="enabled / total"
+          loading={skillsLoading}
+          animate={false}
         />
       </div>
+
+      {/* Error banner when status API fails */}
+      {statusError && (
+        <section
+          className="rounded-[var(--radius-lg)] p-4"
+          style={{
+            background: 'rgba(248,113,113,0.06)',
+            border: '1px solid rgba(248,113,113,0.2)',
+          }}
+        >
+          <div className="flex items-center gap-2 text-[#f87171]">
+            <AlertCircle size={16} />
+            <span className="text-sm font-medium">
+              Failed to connect to agent &mdash; status API returned an error.
+            </span>
+          </div>
+        </section>
+      )}
 
       {/* Gateway Status Grid */}
       {gatewayPlatforms.length > 0 && (
@@ -157,10 +196,29 @@ export default function Overview() {
             <Activity size={14} className="text-[var(--text-muted)]" />
           </div>
           <div className="divide-y divide-[rgba(255,255,255,0.04)]">
-            {recentSessions.length === 0 && (
-              <div className="px-5 py-6 text-center text-sm text-[var(--text-muted)]">No sessions yet</div>
+            {sessionsLoading && (
+              <div className="space-y-0">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 px-5 py-3">
+                    <SkeletonLoader className="w-4 h-4 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <SkeletonLoader className="h-3.5 w-3/4" />
+                      <SkeletonLoader className="h-2.5 w-1/2" />
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
-            {recentSessions.map((session, i) => (
+            {sessionsError && !sessionsLoading && (
+              <div className="px-5 py-6 text-center text-sm text-[#f87171] flex items-center justify-center gap-2">
+                <AlertCircle size={14} />
+                Failed to load sessions
+              </div>
+            )}
+            {!sessionsLoading && !sessionsError && recentSessions.length === 0 && (
+              <div className="px-5 py-6 text-center text-sm text-[var(--text-muted)]">No sessions recorded yet</div>
+            )}
+            {!sessionsLoading && !sessionsError && recentSessions.map((session, i) => (
               <div
                 key={session.id}
                 className="group relative flex items-start gap-3 px-5 py-3 cursor-pointer transition-all duration-200"
@@ -211,10 +269,29 @@ export default function Overview() {
             <h2 className="text-sm font-medium text-[var(--text-primary)]">Provider Keys</h2>
           </div>
           <div className="divide-y divide-[rgba(255,255,255,0.04)]">
-            {providerEntries.length === 0 && (
+            {envLoading && (
+              <div className="space-y-0">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="flex items-center justify-between px-5 py-3">
+                    <div className="flex items-center gap-3">
+                      <SkeletonLoader className="w-2 h-2 rounded-full" />
+                      <SkeletonLoader className="h-3.5 w-24" />
+                    </div>
+                    <SkeletonLoader className="h-5 w-16 rounded-[var(--radius-sm)]" />
+                  </div>
+                ))}
+              </div>
+            )}
+            {envError && !envLoading && (
+              <div className="px-5 py-6 text-center text-sm text-[#f87171] flex items-center justify-center gap-2">
+                <AlertCircle size={14} />
+                Failed to load provider keys
+              </div>
+            )}
+            {!envLoading && !envError && providerEntries.length === 0 && (
               <div className="px-5 py-6 text-center text-sm text-[var(--text-muted)]">No provider keys found</div>
             )}
-            {providerEntries.map((provider, i) => (
+            {!envLoading && !envError && providerEntries.map((provider, i) => (
               <div
                 key={provider.envKey}
                 className="flex items-center justify-between px-5 py-3"
