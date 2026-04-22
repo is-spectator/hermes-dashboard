@@ -1,221 +1,246 @@
-import type {
-  AgentStatus,
-  Config,
-  EnvResponse,
-  LogsResponse,
-  SessionDetail,
-  SessionsResponse,
-  Skill,
-} from './types'
-import { getRequestBaseUrl } from '../lib/config'
+import { useAppStore } from '@/stores/useAppStore';
+import { extractSessionToken } from '@/lib/config';
+import {
+  ApiError,
+  ApiSpaFallbackError,
+  ApiTimeoutError,
+  type ConfigPartial,
+  type ConfigResponse,
+  type DeleteEnvResponse,
+  type EnvRegistry,
+  type LogFile,
+  type LogsResponse,
+  type PutConfigResponse,
+  type PutEnvResponse,
+  type SessionDetail,
+  type SessionMessagesResponse,
+  type SessionsListParams,
+  type SessionsListResponse,
+  type SkillsResponse,
+  type StatusResponse,
+} from '@/api/types';
 
-// ---------------------------------------------------------------------------
-// Token management
-// ---------------------------------------------------------------------------
-let cachedToken: string | null = null
-let tokenPromise: Promise<string | null> | null = null
+const DEFAULT_TIMEOUT_MS = 10_000;
 
-/** Extract __HERMES_SESSION_TOKEN__ from an HTML string. */
-function extractToken(html: string): string | null {
-  const match = html.match(/window\.__HERMES_SESSION_TOKEN__\s*=\s*["']([^"']+)["']/)
-  return match ? match[1] : null
+export interface RequestOptions extends Omit<RequestInit, 'signal'> {
+  timeoutMs?: number;
+  /** When true, skip Authorization header injection (e.g. /api/status). */
+  skipAuth?: boolean;
 }
 
-async function fetchToken(): Promise<string | null> {
+/**
+ * Read baseUrl lazily from the store at each call — avoids capturing a stale
+ * value at module-load time and keeps baseUrl changes in the Settings page
+ * taking effect on the next request without reload.
+ */
+export function getBaseUrl(): string {
+  return useAppStore.getState().baseUrl;
+}
+
+/** Token read from window.__HERMES_SESSION_TOKEN__. Never persisted to storage. */
+export function getSessionToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return window.__HERMES_SESSION_TOKEN__;
+}
+
+/**
+ * Bootstrap path used when baseUrl is empty (same-origin / dev proxy mode).
+ * Vite's dev proxy rewrites this to Hermes's `/` so the token script tag is
+ * available without triggering a CORS preflight on the root origin.
+ */
+const BOOTSTRAP_PATH = '/__hermes_bootstrap';
+
+/**
+ * Lazy token bootstrapping: fetch the Hermes SPA shell and extract the inline
+ * session token. Cached on window once fetched. Returns null on any failure —
+ * callers decide whether that's fatal. Never throws.
+ */
+export async function fetchSessionToken(baseUrl: string): Promise<string | null> {
   try {
-    // 1. Try the Vite dev-proxy path first (works in dev, 404 in production)
-    const proxyRes = await fetch(`${getRequestBaseUrl()}/__hermes_root__`, {
-      headers: { Accept: 'text/html' },
-      signal: AbortSignal.timeout(5000),
-    })
-    if (proxyRes.ok) {
-      const contentType = proxyRes.headers.get('content-type') || ''
-      if (contentType.includes('text/html')) {
-        const token = extractToken(await proxyRes.text())
-        if (token) return token
-      }
+    const url =
+      baseUrl && baseUrl.length > 0
+        ? baseUrl.replace(/\/+$/, '') + '/'
+        : BOOTSTRAP_PATH;
+    const res = await fetch(url, { method: 'GET' });
+    if (!res.ok) return null;
+    const html = await res.text();
+    const token = extractSessionToken(html);
+    if (token && typeof window !== 'undefined') {
+      window.__HERMES_SESSION_TOKEN__ = token;
     }
+    return token;
   } catch {
-    // Proxy path unavailable — fall through to direct fetch
+    return null;
   }
-
-  try {
-    // 2. Fall back to fetching the Hermes root page directly
-    const directRes = await fetch(`${getRequestBaseUrl()}/`, {
-      headers: { Accept: 'text/html' },
-      signal: AbortSignal.timeout(5000),
-    })
-    if (directRes.ok) {
-      const contentType = directRes.headers.get('content-type') || ''
-      if (contentType.includes('text/html')) {
-        const token = extractToken(await directRes.text())
-        if (token) return token
-      }
-    }
-  } catch {
-    // Direct fetch also failed
-  }
-
-  return null
 }
 
-async function getToken(): Promise<string | null> {
-  if (cachedToken) return cachedToken
-  if (!tokenPromise) {
-    tokenPromise = fetchToken().then((token) => {
-      cachedToken = token
-      tokenPromise = null
-      return token
-    })
-  }
-  return tokenPromise
+async function ensureToken(baseUrl: string): Promise<string | null> {
+  const existing = getSessionToken();
+  if (existing && existing.length > 0) return existing;
+  return await fetchSessionToken(baseUrl);
 }
 
-/** Clear cached token so it will be re-fetched on next request. */
-export function clearToken() {
-  cachedToken = null
-  tokenPromise = null
+function joinUrl(baseUrl: string, path: string): string {
+  if (/^https?:\/\//.test(path)) return path;
+  const b = baseUrl.replace(/\/+$/, '');
+  const p = path.startsWith('/') ? path : '/' + path;
+  return b + p;
 }
 
-// ---------------------------------------------------------------------------
-// Core request helper
-// ---------------------------------------------------------------------------
+function isJsonContentType(headerValue: string | null): boolean {
+  if (!headerValue) return false;
+  // application/json, application/problem+json, etc.
+  return /application\/(?:[\w.+-]+\+)?json/i.test(headerValue);
+}
 
-async function request<T>(
+/**
+ * Core request helper. Contract (see audit §"Dashboard Integration Notes"):
+ *   1. 204 → null
+ *   2. !ok → ApiError (body preserved; 401 flagged isUnauthorized)
+ *   3. non-JSON content-type → ApiSpaFallbackError (SPA fallback trap)
+ *   4. timeout → ApiTimeoutError
+ */
+export async function request<T>(
   path: string,
-  options?: RequestInit,
-  isRetry = false,
+  init: RequestOptions = {},
 ): Promise<T> {
-  const token = await getToken()
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(options?.headers as Record<string, string>),
+  const { timeoutMs = DEFAULT_TIMEOUT_MS, skipAuth = false, headers, ...rest } = init;
+  const baseUrl = getBaseUrl();
+  const url = joinUrl(baseUrl, path);
+
+  const requestHeaders = new Headers(headers as HeadersInit | undefined);
+  if (!requestHeaders.has('Content-Type') && rest.body !== undefined && rest.body !== null) {
+    requestHeaders.set('Content-Type', 'application/json');
   }
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`
+  requestHeaders.set('Accept', 'application/json');
+
+  if (!skipAuth) {
+    const token = await ensureToken(baseUrl);
+    if (token) requestHeaders.set('Authorization', `Bearer ${token}`);
   }
 
-  const baseUrl = getRequestBaseUrl()
+  const controller = new AbortController();
+  const timerId =
+    typeof window === 'undefined'
+      ? setTimeout(() => controller.abort(), timeoutMs)
+      : window.setTimeout(() => controller.abort(), timeoutMs);
 
-  let res: Response
+  let response: Response;
   try {
-    res = await fetch(`${baseUrl}${path}`, {
-      ...options,
-      headers,
-      signal: options?.signal ?? AbortSignal.timeout(10_000),
-    })
+    response = await fetch(url, {
+      ...rest,
+      headers: requestHeaders,
+      signal: controller.signal,
+    });
   } catch (err) {
-    if (err instanceof TypeError) {
-      throw new Error('Network error — is Hermes Agent running?')
+    if (typeof window === 'undefined') clearTimeout(timerId as ReturnType<typeof setTimeout>);
+    else window.clearTimeout(timerId as number);
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      throw new ApiTimeoutError(path, timeoutMs);
     }
-    throw err
+    // Re-throw as ApiError with status 0 so callers have a consistent shape.
+    const message = err instanceof Error ? err.message : 'Network error';
+    throw new ApiError(message, 0, null);
+  } finally {
+    if (typeof window === 'undefined') clearTimeout(timerId as ReturnType<typeof setTimeout>);
+    else window.clearTimeout(timerId as number);
   }
 
-  // --- Handle 401/403: clear token and retry once -------------------------
-  if ((res.status === 401 || res.status === 403) && !isRetry) {
-    clearToken()
-    const newToken = await getToken()
-    if (newToken) {
-      headers['Authorization'] = `Bearer ${newToken}`
-      return request<T>(path, { ...options, headers }, true)
-    }
+  // 1. 204 No Content
+  if (response.status === 204) {
+    return null as unknown as T;
   }
 
-  // --- Read error body before throwing ------------------------------------
-  if (!res.ok) {
-    let errorMessage = `${res.status} ${res.statusText}`
+  // 2. Error statuses — preserve body.
+  if (!response.ok) {
+    let body: unknown = null;
+    const ct = response.headers.get('content-type');
     try {
-      const ct = res.headers.get('content-type') || ''
-      if (ct.includes('application/json')) {
-        const errorBody = await res.json()
-        // Hermes returns {"detail": [{msg: "..."}]}
-        if (errorBody.detail && Array.isArray(errorBody.detail)) {
-          errorMessage = errorBody.detail.map((d: { msg?: string }) => d.msg).join('; ')
-        } else if (errorBody.message) {
-          errorMessage = errorBody.message
-        }
+      if (isJsonContentType(ct)) {
+        body = await response.json();
       } else {
-        errorMessage = (await res.text()) || errorMessage
+        body = await response.text();
       }
     } catch {
-      /* keep original status message */
+      body = null;
     }
-    throw new Error(errorMessage)
+    const message =
+      typeof body === 'object' && body !== null && 'detail' in body
+        ? String((body as { detail: unknown }).detail)
+        : `Request failed (${response.status})`;
+    throw new ApiError(message, response.status, body);
   }
 
-  // --- Handle 204 No Content (before content-type guard) ------------------
-  if (res.status === 204) {
-    return undefined as T
+  // 3. SPA fallback trap — success status with HTML content is a missing endpoint.
+  const contentType = response.headers.get('content-type');
+  if (!isJsonContentType(contentType)) {
+    throw new ApiSpaFallbackError(path);
   }
 
-  // --- Guard against non-JSON (SPA fallback HTML) -------------------------
-  const contentType = res.headers.get('content-type') || ''
-  if (!contentType.includes('application/json')) {
-    throw new Error(
-      `Received non-JSON response (${contentType || 'no content-type'}) — endpoint may not exist`,
-    )
-  }
-
-  return res.json()
+  // 4. Happy path.
+  return (await response.json()) as T;
 }
 
 // ---------------------------------------------------------------------------
-// Public API surface
+// Typed convenience wrappers
 // ---------------------------------------------------------------------------
 
-export const api = {
-  // Status (no auth required — but request() handles that transparently)
-  getStatus: () => request<AgentStatus>('/api/status'),
+function qs(params?: Record<string, string | number | undefined>): string {
+  if (!params) return '';
+  const parts: string[] = [];
+  for (const [k, v] of Object.entries(params)) {
+    if (v === undefined || v === '') continue;
+    parts.push(`${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`);
+  }
+  return parts.length > 0 ? '?' + parts.join('&') : '';
+}
 
-  // Config
-  getConfig: () => request<Config>('/api/config'),
-  updateConfig: (config: Partial<Config>) =>
-    request<{ ok: boolean }>('/api/config', {
+export const api = {
+  // /api/status is unauthenticated per audit §2.
+  getStatus: () => request<StatusResponse>('/api/status', { skipAuth: true }),
+
+  getConfig: () => request<ConfigResponse>('/api/config'),
+
+  /** Audit §4: body MUST be wrapped in { config: ... } or server returns 422. */
+  putConfig: (partial: ConfigPartial) =>
+    request<PutConfigResponse>('/api/config', {
       method: 'PUT',
-      body: JSON.stringify({ config }),
+      body: JSON.stringify({ config: partial }),
     }),
 
-  // Env / Keys — returns Record<string, EnvVariable>
-  getEnv: () => request<EnvResponse>('/api/env'),
-  updateEnv: (key: string, value: string) =>
-    request<{ ok: boolean; key: string }>('/api/env', {
+  getEnv: () => request<EnvRegistry>('/api/env'),
+
+  putEnv: (key: string, value: string) =>
+    request<PutEnvResponse>('/api/env', {
       method: 'PUT',
       body: JSON.stringify({ key, value }),
     }),
-  deleteEnvKey: (key: string) =>
-    request<{ ok: boolean; key: string }>('/api/env', {
+
+  deleteEnv: (key: string) =>
+    request<DeleteEnvResponse>('/api/env', {
       method: 'DELETE',
       body: JSON.stringify({ key }),
     }),
 
-  // Sessions — returns { sessions: Session[] }
-  getSessions: (params?: { search?: string; source?: string }) => {
-    const qs = new URLSearchParams()
-    if (params?.search) qs.set('search', params.search)
-    if (params?.source) qs.set('source', params.source)
-    const query = qs.toString()
-    return request<SessionsResponse>(`/api/sessions${query ? `?${query}` : ''}`)
-  },
-  getSession: (id: string) => request<SessionDetail>(`/api/sessions/${id}`),
-  getSessionMessages: (id: string) =>
-    request<{ session_id: string; messages: { role: string; content: string }[] }>(
-      `/api/sessions/${id}/messages`,
+  getSessions: (params?: SessionsListParams) =>
+    request<SessionsListResponse>(
+      '/api/sessions' +
+        qs({
+          ...(params?.limit !== undefined ? { limit: params.limit } : {}),
+          ...(params?.offset !== undefined ? { offset: params.offset } : {}),
+          ...(params?.search !== undefined ? { search: params.search } : {}),
+          ...(params?.source !== undefined ? { source: params.source } : {}),
+        }),
     ),
 
-  // Skills — returns Skill[]
-  getSkills: () => request<Skill[]>('/api/skills'),
+  getSession: (id: string) =>
+    request<SessionDetail>(`/api/sessions/${encodeURIComponent(id)}`),
 
-  // Logs — returns { file, lines }
-  getLogs: (params?: { file?: string; level?: string; search?: string; limit?: number }) => {
-    const qs = new URLSearchParams()
-    if (params?.file) qs.set('file', params.file)
-    if (params?.level) qs.set('level', params.level)
-    if (params?.search) qs.set('search', params.search)
-    if (params?.limit) qs.set('limit', String(params.limit))
-    const query = qs.toString()
-    return request<LogsResponse>(`/api/logs${query ? `?${query}` : ''}`)
-  },
+  getSessionMessages: (id: string) =>
+    request<SessionMessagesResponse>(`/api/sessions/${encodeURIComponent(id)}/messages`),
 
-  // Cron — not available in v0.9.0
-  // Gateway — info is part of /api/status response
-}
+  getSkills: () => request<SkillsResponse>('/api/skills'),
+
+  getLogs: (file: LogFile = 'agent') =>
+    request<LogsResponse>('/api/logs' + qs({ file })),
+};

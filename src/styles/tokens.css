@@ -1,159 +1,276 @@
-/* ============================================
-   Hermes Dashboard — Design Token System
-   Clean, professional, operator-first
-   ============================================ */
+/**
+ * Hermes Dashboard design tokens (PRD v2.0 §5.2–5.5, §6.3–6.5).
+ *
+ * Contracts:
+ *   1. Every user-visible color comes from a --token var here. Business pages
+ *      MUST NOT hard-code hex values (except the global danger/warning/success
+ *      semantic scale, which is also token-backed anyway).
+ *   2. Only opacity + transform are animated in @keyframes (compositor-only,
+ *      no layout/paint thrash).
+ *   3. prefers-reduced-motion collapses all animations + transitions to 0.01ms.
+ *   4. The @theme block bridges the CSS custom properties into Tailwind v4's
+ *      utility layer so that atoms like `text-accent`, `bg-secondary`, and
+ *      `border-default` resolve to the live tokens (dark/light aware).
+ *
+ * Animation inventory (for the ≤ 5 simultaneous loops rule in PRD §6.5):
+ *   - u-pulse-slow       → StatusDot.online (owns 1)
+ *   - u-pulse-fast       → StatusDot.degraded (owns 1)
+ *   - u-border-breathe   → GatewayCard/ProviderCard connected edge (owns 1)
+ *   - u-shimmer          → SkeletonLoader (owns 1 per visible skeleton; capped by page)
+ *   - u-fade-in-up       → PageTransition + Toast entrance (one-shot, not a loop)
+ *   - u-slide-in         → SideDrawer entrance (one-shot, not a loop)
+ */
 
-/* --- Dark Theme (Default) --- */
-:root {
-  color-scheme: dark;
+/* --------------------------------------------------------------------------
+ * Dark theme (default).
+ * -------------------------------------------------------------------------- */
 
-  /* Backgrounds */
-  --bg-app: #0b0d10;
-  --bg-surface: #111418;
-  --bg-surface-2: #151a20;
-  --bg-muted: #0f1216;
+:root,
+:root[data-theme='dark'] {
+  /* Color — surfaces (Tailwind Neutral 950/900/800) per R6 color alignment */
+  --bg-primary: #0a0a0a; /* neutral-950 */
+  --bg-secondary: #171717; /* neutral-900 */
+  --bg-tertiary: #262626; /* neutral-800 */
+  --bg-elevated: #1c1c1c; /* neutral-900 slightly lifted, cardSolid */
 
-  /* Borders */
-  --border-default: #232a33;
-  --border-strong: #2d3642;
-  --border-focus: #3b82f6;
+  /* Color — lines */
+  --border-default: #262626; /* neutral-800 */
+  --border-subtle: #1a1a1a; /* neutral-800/60 equivalent */
 
-  /* Text */
-  --text-primary: #e8edf2;
-  --text-secondary: #a7b0ba;
-  --text-tertiary: #7b8794;
+  /* Color — text (Tailwind Neutral 100/400/500) */
+  --text-primary: #f5f5f5; /* neutral-100 */
+  --text-secondary: #a3a3a3; /* neutral-400 */
+  --text-muted: #737373; /* neutral-500 */
 
-  /* Accent */
-  --accent: #4f8cff;
-  --accent-soft: rgba(79, 140, 255, 0.12);
+  /* Color — semantic (matches design mock: blue-400, emerald-500, amber-500, rose-500) */
+  --accent: #60a5fa; /* blue-400 */
+  --accent-muted: #2563eb; /* blue-600 */
+  --success: #10b981; /* emerald-500 */
+  --warning: #f59e0b; /* amber-500 */
+  --danger: #f43f5e; /* rose-500 */
 
-  /* Semantic */
-  --success: #22c55e;
-  --success-soft: rgba(34, 197, 94, 0.12);
-  --warning: #f59e0b;
-  --warning-soft: rgba(245, 158, 11, 0.12);
-  --danger: #ef4444;
-  --danger-soft: rgba(239, 68, 68, 0.12);
-  --info: #38bdf8;
-
-  /* Border Radius */
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 10px;
-
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.18);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.18);
+  /* Focus ring — derived from accent with alpha */
+  --focus-ring: rgba(96, 165, 250, 0.45);
 
   /* Typography */
-  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-sans:
+    'Geist Sans', system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei',
+    sans-serif;
+  --font-mono:
+    'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo,
+    Consolas, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+
+  /* Spacing — 4px base */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-14: 3.5rem;
+  --space-16: 4rem;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  /* Layout constants */
+  --sidebar-w-collapsed: 64px;
+  --sidebar-w-expanded: 220px;
+  --header-h: 56px;
+
+  color-scheme: dark;
 }
 
-/* --- Light Theme --- */
-[data-theme="light"] {
+/* --------------------------------------------------------------------------
+ * Light theme.
+ * -------------------------------------------------------------------------- */
+
+:root[data-theme='light'] {
+  /* Tailwind Neutral 50/100/200/900 alignment */
+  --bg-primary: #fafafa; /* neutral-50 */
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #e5e5e5; /* neutral-200 */
+  --bg-elevated: #ffffff;
+
+  --border-default: #e5e5e5; /* neutral-200 */
+  --border-subtle: #f5f5f5; /* neutral-100 */
+
+  --text-primary: #171717; /* neutral-900 */
+  --text-secondary: #525252; /* neutral-600 */
+  --text-muted: #a3a3a3; /* neutral-400 */
+
+  --accent: #2563eb; /* blue-600 reads better on light */
+  --accent-muted: #1d4ed8;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #f43f5e;
+
+  --focus-ring: rgba(37, 99, 235, 0.45);
+
   color-scheme: light;
-
-  --bg-app: #f6f8fb;
-  --bg-surface: #ffffff;
-  --bg-surface-2: #f8fafc;
-  --bg-muted: #eef2f6;
-
-  --border-default: #e2e8f0;
-  --border-strong: #cbd5e1;
-  --border-focus: #2563eb;
-
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-tertiary: #64748b;
-
-  --accent: #2563eb;
-  --accent-soft: rgba(37, 99, 235, 0.08);
-
-  --success: #16a34a;
-  --success-soft: rgba(22, 163, 74, 0.1);
-  --warning: #d97706;
-  --warning-soft: rgba(217, 119, 6, 0.1);
-  --danger: #dc2626;
-  --danger-soft: rgba(220, 38, 38, 0.1);
-  --info: #0284c7;
-
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
-/* --- Animations --- */
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+/* --------------------------------------------------------------------------
+ * Tailwind v4 bridge — expose tokens as theme colors so utilities like
+ * `bg-secondary`, `text-accent`, `border-default` resolve to live CSS vars.
+ *
+ * Naming keeps the var name 1:1 (minus the `--` prefix) so components can
+ * either use the utility class or reach for `var(--token)` directly.
+ * -------------------------------------------------------------------------- */
+
+@theme inline {
+  --color-bg-primary: var(--bg-primary);
+  --color-bg-secondary: var(--bg-secondary);
+  --color-bg-tertiary: var(--bg-tertiary);
+  --color-bg-elevated: var(--bg-elevated);
+
+  --color-border-default: var(--border-default);
+  --color-border-subtle: var(--border-subtle);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+
+  --color-accent: var(--accent);
+  --color-accent-muted: var(--accent-muted);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
 }
 
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+/* --------------------------------------------------------------------------
+ * Keyframes — opacity + transform only (PRD §6.5).
+ * -------------------------------------------------------------------------- */
+
+@keyframes pulse-slow {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+@keyframes pulse-fast {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 
-/* --- Reduced Motion --- */
+/* Border-breathe uses outline so we don't fight component border-color. */
+@keyframes border-breathe {
+  0%,
+  100% {
+    outline-color: color-mix(in srgb, var(--success) 15%, transparent);
+  }
+  50% {
+    outline-color: color-mix(in srgb, var(--success) 45%, transparent);
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * Utility classes — components opt-in by class name, never inline animation.
+ * -------------------------------------------------------------------------- */
+
+.u-pulse-slow {
+  animation: pulse-slow 2s ease-in-out infinite;
+}
+
+.u-pulse-fast {
+  animation: pulse-fast 0.8s ease-in-out infinite;
+}
+
+.u-border-breathe {
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+  animation: border-breathe 3s ease-in-out infinite;
+}
+
+.u-fade-in-up {
+  animation: fade-in-up 150ms ease-out both;
+}
+
+.u-slide-in {
+  animation: slide-in-right 200ms ease-out both;
+}
+
+.u-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    var(--bg-secondary) 0%,
+    var(--bg-tertiary) 50%,
+    var(--bg-secondary) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s linear infinite;
+}
+
+/* --------------------------------------------------------------------------
+ * Reduced motion — PRD §6.4.
+ * -------------------------------------------------------------------------- */
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
-}
-
-/* --- Global Resets --- */
-*,
-*::before,
-*::after {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-html {
-  font-size: 16px;
-}
-
-body {
-  font-family: var(--font-sans);
-  background: var(--bg-app);
-  color: var(--text-primary);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-#root {
-  min-height: 100vh;
-}
-
-/* Scrollbar styling -- clean and subtle */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--border-default);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--border-strong);
-}
-
-/* Firefox scrollbar */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-default) transparent;
 }

@@ -9,56 +9,27 @@ on:
 jobs:
   ci:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install
+        run: npm ci || npm install --legacy-peer-deps
 
       - name: Lint
         run: npm run lint
 
       - name: Type check
-        run: npx tsc --noEmit
+        run: npx tsc -b --noEmit
 
       - name: Test
-        run: npm test
+        run: npm test -- --run
 
       - name: Build
         run: npm run build
 
-      - name: Bundle size check
-        run: |
-          JS_FILE=$(ls dist/assets/index-*.js 2>/dev/null | head -1)
-          CSS_FILE=$(ls dist/assets/index-*.css 2>/dev/null | head -1)
-
-          if [ -z "$JS_FILE" ]; then
-            echo "::error::No JS bundle found in dist/assets/"
-            exit 1
-          fi
-
-          JS_SIZE=$(wc -c < "$JS_FILE" | tr -d ' ')
-          CSS_SIZE=$(wc -c < "$CSS_FILE" | tr -d ' ')
-          JS_GZ=$(gzip -c "$JS_FILE" | wc -c | tr -d ' ')
-          CSS_GZ=$(gzip -c "$CSS_FILE" | wc -c | tr -d ' ')
-
-          echo "## Bundle Size Report" >> "$GITHUB_STEP_SUMMARY"
-          echo "| Asset | Raw | Gzipped |" >> "$GITHUB_STEP_SUMMARY"
-          echo "|---|---|---|" >> "$GITHUB_STEP_SUMMARY"
-          echo "| JS | $(( JS_SIZE / 1024 )) KB | $(( JS_GZ / 1024 )) KB |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| CSS | $(( CSS_SIZE / 1024 )) KB | $(( CSS_GZ / 1024 )) KB |" >> "$GITHUB_STEP_SUMMARY"
-
-          echo "JS bundle: ${JS_SIZE} bytes ($(( JS_SIZE / 1024 )) KB raw, $(( JS_GZ / 1024 )) KB gzipped)"
-          echo "CSS bundle: ${CSS_SIZE} bytes ($(( CSS_SIZE / 1024 )) KB raw, $(( CSS_GZ / 1024 )) KB gzipped)"
-
-          # Fail if JS > 500KB uncompressed (~120KB gzipped)
-          if [ "$JS_SIZE" -gt 512000 ]; then
-            echo "::error::JS bundle exceeds 500 KB limit (${JS_SIZE} bytes)"
-            exit 1
-          fi
+      - name: Size limit
+        run: npx size-limit

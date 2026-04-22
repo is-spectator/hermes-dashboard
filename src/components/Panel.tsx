@@ -1,25 +1,41 @@
-import { cn } from '../lib/utils'
+import type { ElementType, ReactNode } from 'react';
+import { cn } from '@/lib/utils';
 
-interface PanelProps {
-  title?: string
-  children: React.ReactNode
-  className?: string
+/**
+ * Panel — generic card container. Used by pages to group content into a
+ * framed "panel" that matches the Linear / Vercel look (PRD §5.1).
+ *
+ * Animation contribution: none.
+ */
+
+export interface PanelProps {
+  children: ReactNode;
+  /** Render as `section`/`article`/etc; defaults to `section`. */
+  as?: ElementType;
+  /** Collapse the inner padding (useful when the child already has its own). */
+  flush?: boolean;
+  className?: string;
 }
 
-export default function Panel({ title, children, className }: PanelProps) {
+export function Panel({
+  children,
+  as: Tag = 'section',
+  flush = false,
+  className,
+}: PanelProps) {
   return (
-    <div
-      className={cn(
-        'bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-md)] p-4',
-        className
-      )}
+    <Tag
+      className={cn('relative', className)}
+      style={{
+        background: 'var(--bg-secondary)',
+        border: '1px solid var(--border-default)',
+        borderRadius: 'var(--radius-lg)',
+        padding: flush ? 0 : 'var(--space-6)',
+      }}
     >
-      {title && (
-        <h3 className="text-xs font-medium uppercase tracking-wide text-[var(--text-tertiary)] mb-3">
-          {title}
-        </h3>
-      )}
       {children}
-    </div>
-  )
+    </Tag>
+  );
 }
+
+export default Panel;

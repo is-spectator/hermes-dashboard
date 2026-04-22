@@ -1,171 +1,109 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { api } from '@/api/client';
 
-// ---------------------------------------------------------------------------
-// Mock fetch globally before any module-level code in client.ts runs
-// ---------------------------------------------------------------------------
-const mockFetch = vi.fn()
-vi.stubGlobal('fetch', mockFetch)
-
-// Helpers to build mock Response objects
-function mockHeaders(entries: [string, string][]): Headers {
-  const h = new Headers()
-  entries.forEach(([k, v]) => h.set(k, v))
-  return h
-}
-
-function tokenResponse(token: string): Partial<Response> {
-  return {
-    ok: true,
-    headers: mockHeaders([['content-type', 'text/html']]),
-    text: () =>
-      Promise.resolve(
-        `<html><script>window.__HERMES_SESSION_TOKEN__="${token}"</script></html>`,
-      ),
-  } as Partial<Response>
-}
-
-function jsonResponse<T>(body: T, status = 200): Partial<Response> {
-  return {
-    ok: status >= 200 && status < 300,
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
     status,
-    statusText: status === 200 ? 'OK' : 'Error',
-    headers: mockHeaders([['content-type', 'application/json']]),
-    json: () => Promise.resolve(body),
-  } as Partial<Response>
+    headers: { 'content-type': 'application/json' },
+  });
 }
 
-// ---------------------------------------------------------------------------
-// Each test dynamically imports `client.ts` after resetting modules so we
-// get fresh module-level state (cached token, etc.)
-// ---------------------------------------------------------------------------
+describe('api convenience wrappers', () => {
+  const fetchMock = vi.fn();
 
-beforeEach(() => {
-  vi.resetModules()
-  mockFetch.mockReset()
-  localStorage.clear()
-})
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.stubGlobal('fetch', fetchMock);
+    window.__HERMES_SESSION_TOKEN__ = 'test-token';
+  });
 
-// ---------------------------------------------------------------------------
-// updateEnv – sends {key, value} format via PUT
-// ---------------------------------------------------------------------------
-describe('api.updateEnv', () => {
-  it('sends {key, value} format via PUT', async () => {
-    mockFetch
-      .mockResolvedValueOnce(tokenResponse('test-token')) // token fetch (proxy path)
-      .mockResolvedValueOnce(jsonResponse({ ok: true, key: 'TEST_KEY' })) // PUT /api/env
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
 
-    const { api } = await import('../client')
-    await api.updateEnv('TEST_KEY', 'test-value')
+  it('getStatus hits /api/status without an Authorization header (skipAuth)', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        version: '0.9.0',
+        release_date: '2026.4.13',
+        hermes_home: '/Users/x/.hermes',
+        config_path: '/Users/x/.hermes/config.yaml',
+        env_path: '/Users/x/.hermes/.env',
+        config_version: 17,
+        latest_config_version: 17,
+        gateway_running: false,
+        gateway_pid: null,
+        gateway_state: null,
+        gateway_platforms: {},
+        gateway_exit_reason: null,
+        gateway_updated_at: null,
+        active_sessions: 0,
+      }),
+    );
 
-    // The second call is the actual API call (first is the token fetch)
-    const apiCall = mockFetch.mock.calls[1]
-    expect(apiCall[0]).toContain('/api/env')
-    expect(apiCall[1].method).toBe('PUT')
+    const result = await api.getStatus();
+    expect(result.version).toBe('0.9.0');
 
-    const body = JSON.parse(apiCall[1].body)
-    expect(body).toEqual({ key: 'TEST_KEY', value: 'test-value' })
-  })
-})
+    const [, init] = fetchMock.mock.calls[0]!;
+    const headers = (init as RequestInit).headers as Headers;
+    expect(headers.get('Authorization')).toBeNull();
+  });
 
-// ---------------------------------------------------------------------------
-// updateConfig – wraps payload in {config: ...}
-// ---------------------------------------------------------------------------
-describe('api.updateConfig', () => {
-  it('wraps payload in {config: ...}', async () => {
-    mockFetch
-      .mockResolvedValueOnce(tokenResponse('test-token'))
-      .mockResolvedValueOnce(jsonResponse({ ok: true }))
+  it('putConfig wraps body in { config: ... } envelope', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ ok: true }));
 
-    const { api } = await import('../client')
-    await api.updateConfig({ model: 'gpt-4o' })
+    await api.putConfig({ model: 'gpt-4o' });
 
-    const apiCall = mockFetch.mock.calls[1]
-    expect(apiCall[0]).toContain('/api/config')
-    expect(apiCall[1].method).toBe('PUT')
+    const [, init] = fetchMock.mock.calls[0]!;
+    const body = (init as RequestInit).body as string;
+    expect(JSON.parse(body)).toEqual({ config: { model: 'gpt-4o' } });
+    expect((init as RequestInit).method).toBe('PUT');
+  });
 
-    const body = JSON.parse(apiCall[1].body)
-    expect(body).toEqual({ config: { model: 'gpt-4o' } })
-  })
-})
+  it('putEnv sends key/value as top-level fields with PUT', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ ok: true, key: 'FOO' }));
 
-// ---------------------------------------------------------------------------
-// deleteEnvKey – sends {key: "..."} via DELETE
-// ---------------------------------------------------------------------------
-describe('api.deleteEnvKey', () => {
-  it('sends {key} via DELETE', async () => {
-    mockFetch
-      .mockResolvedValueOnce(tokenResponse('test-token'))
-      .mockResolvedValueOnce(jsonResponse({ ok: true, key: 'OLD_KEY' }))
+    await api.putEnv('FOO', 'bar');
 
-    const { api } = await import('../client')
-    await api.deleteEnvKey('OLD_KEY')
+    const [, init] = fetchMock.mock.calls[0]!;
+    const body = (init as RequestInit).body as string;
+    expect(JSON.parse(body)).toEqual({ key: 'FOO', value: 'bar' });
+    expect((init as RequestInit).method).toBe('PUT');
+  });
 
-    const apiCall = mockFetch.mock.calls[1]
-    expect(apiCall[0]).toContain('/api/env')
-    expect(apiCall[1].method).toBe('DELETE')
+  it('deleteEnv sends { key } in body with DELETE method', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ ok: true, key: 'FOO' }));
 
-    const body = JSON.parse(apiCall[1].body)
-    expect(body).toEqual({ key: 'OLD_KEY' })
-  })
-})
+    await api.deleteEnv('FOO');
 
-// ---------------------------------------------------------------------------
-// getStatus – basic GET, no special body
-// ---------------------------------------------------------------------------
-describe('api.getStatus', () => {
-  it('calls GET /api/status', async () => {
-    mockFetch
-      .mockResolvedValueOnce(tokenResponse('test-token'))
-      .mockResolvedValueOnce(
-        jsonResponse({ version: '0.9.0', active_sessions: 0 }),
-      )
+    const [, init] = fetchMock.mock.calls[0]!;
+    const body = (init as RequestInit).body as string;
+    expect(JSON.parse(body)).toEqual({ key: 'FOO' });
+    expect((init as RequestInit).method).toBe('DELETE');
+  });
 
-    const { api } = await import('../client')
-    const result = await api.getStatus()
+  it('getSessions serialises query params', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ sessions: [], total: 0, limit: 50, offset: 0 }),
+    );
 
-    const apiCall = mockFetch.mock.calls[1]
-    expect(apiCall[0]).toContain('/api/status')
-    expect(result).toEqual({ version: '0.9.0', active_sessions: 0 })
-  })
-})
+    await api.getSessions({ limit: 25, offset: 0, search: 'hi', source: 'cli' });
 
-// ---------------------------------------------------------------------------
-// getSessions – passes search and source as query params
-// ---------------------------------------------------------------------------
-describe('api.getSessions', () => {
-  it('passes search and source as query params', async () => {
-    mockFetch
-      .mockResolvedValueOnce(tokenResponse('test-token'))
-      .mockResolvedValueOnce(
-        jsonResponse({ sessions: [], total: 0, limit: 50, offset: 0 }),
-      )
+    const [url] = fetchMock.mock.calls[0]!;
+    expect(String(url)).toMatch(/\/api\/sessions\?/);
+    expect(String(url)).toMatch(/limit=25/);
+    expect(String(url)).toMatch(/search=hi/);
+    expect(String(url)).toMatch(/source=cli/);
+  });
 
-    const { api } = await import('../client')
-    await api.getSessions({ search: 'hello', source: 'cli' })
+  it('getLogs defaults file=agent', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ file: 'agent', lines: [] }),
+    );
 
-    const apiCall = mockFetch.mock.calls[1]
-    const url: string = apiCall[0]
-    expect(url).toContain('/api/sessions')
-    expect(url).toContain('search=hello')
-    expect(url).toContain('source=cli')
-  })
-})
+    await api.getLogs();
 
-// ---------------------------------------------------------------------------
-// Token is attached as Bearer header
-// ---------------------------------------------------------------------------
-describe('Authorization header', () => {
-  it('attaches Bearer token to requests', async () => {
-    mockFetch
-      .mockResolvedValueOnce(tokenResponse('my-secret-token'))
-      .mockResolvedValueOnce(jsonResponse({ version: '0.9.0' }))
-
-    const { api } = await import('../client')
-    await api.getStatus()
-
-    const apiCall = mockFetch.mock.calls[1]
-    expect(apiCall[1].headers['Authorization']).toBe(
-      'Bearer my-secret-token',
-    )
-  })
-})
+    const [url] = fetchMock.mock.calls[0]!;
+    expect(String(url)).toMatch(/file=agent/);
+  });
+});

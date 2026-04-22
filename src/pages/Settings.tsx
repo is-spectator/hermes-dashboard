@@ -1,235 +1,908 @@
-import { useState } from 'react'
-import { Sun, Moon, ExternalLink, RefreshCw, CheckCircle, XCircle } from 'lucide-react'
-import { useQueryClient } from '@tanstack/react-query'
-import PageHeader from '../components/PageHeader'
-import Button from '../components/Button'
-import { useAppStore } from '../stores/useAppStore'
-import { cn } from '../lib/utils'
-import { useStatus, useConfig } from '../api/hooks'
-import { clearToken } from '../api/client'
-import { useToastStore } from '../stores/useToastStore'
+import { useEffect, useMemo, useState } from 'react';
+import { CircleCheck, CircleX, Github, Moon, Save, Sun } from 'lucide-react';
+import { PageHeader } from '@/components/PageHeader';
+import { Panel } from '@/components/Panel';
+import { Button } from '@/components/Button';
+import { StatusDot } from '@/components/StatusDot';
+import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { api } from '@/api/client';
+import { useConfig, usePutConfig, useStatus } from '@/api/hooks';
+import { type StatusResponse } from '@/api/types';
+import { useT } from '@/lib/i18n';
+import { useAppStore, type Lang, type Theme } from '@/stores/useAppStore';
+import { useToastStore } from '@/stores/useToastStore';
+import { getDefaultBaseUrl } from '@/lib/config';
+import { formatRelativeTime } from '@/lib/utils';
+import { formatErrorMessage } from '@/lib/errors';
 
-type ConnectionState = 'idle' | 'testing' | 'connected' | 'failed'
+const DEFAULT_BASE_URL = 'http://127.0.0.1:9119';
 
-export default function Settings() {
-  const { theme, setTheme, hermesApiUrl, setHermesApiUrl } = useAppStore()
-  const [apiUrl, setApiUrl] = useState(hermesApiUrl)
-  const [connectionState, setConnectionState] = useState<ConnectionState>('idle')
-  const [connectedVersion, setConnectedVersion] = useState<string | null>(null)
-  const [connectionError, setConnectionError] = useState<string | null>(null)
+export function SettingsPage() {
+  const tr = useT();
 
-  const queryClient = useQueryClient()
-  const { data: status } = useStatus()
-  const { data: config, isLoading: configLoading } = useConfig()
-  const addToast = useToastStore((s) => s.addToast)
+  return (
+    <div>
+      <PageHeader
+        titleEn="Advanced Settings"
+        titleZh="高级设置"
+        descriptionEn="This page is the full configuration panel. Core controls also live in the top bar."
+        descriptionZh="本页是完整的配置面板。常用控件也位于顶栏。"
+      />
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 'var(--space-4)',
+        }}
+      >
+        <GeneralSection />
+        <AppearanceSection />
+        <ConnectionSection />
+        <ConfigurationSection />
+        <AboutSection />
+      </div>
+      <span hidden>{tr(' ', ' ')}</span>
+    </div>
+  );
+}
 
-  const saveConnection = async () => {
-    setConnectionState('testing')
-    setConnectedVersion(null)
-    setConnectionError(null)
+// ---------------------------------------------------------------------------
+// General
+// ---------------------------------------------------------------------------
 
-    try {
-      // Test the NEW url directly -- do NOT persist until confirmed
-      const testRes = await fetch(`${apiUrl}/api/status`, {
-        signal: AbortSignal.timeout(5000),
-      })
-      if (!testRes.ok) throw new Error(`HTTP ${testRes.status}`)
-      const ct = testRes.headers.get('content-type') || ''
-      if (!ct.includes('json')) throw new Error('Not a Hermes API')
-      const data = await testRes.json()
-      if (!data.version) throw new Error('Invalid response')
+function GeneralSection() {
+  const tr = useT();
+  const lang = useAppStore((s) => s.lang);
+  const setLang = useAppStore((s) => s.setLang);
+  const timezone =
+    typeof Intl !== 'undefined'
+      ? Intl.DateTimeFormat().resolvedOptions().timeZone
+      : '—';
 
-      // SUCCESS -- now persist
-      setHermesApiUrl(apiUrl)
-      clearToken()
-      queryClient.clear()
-      setConnectionState('connected')
-      setConnectedVersion(data.version)
-      addToast('success', `Connected to Hermes v${data.version}`)
-    } catch (err) {
-      setConnectionState('failed')
-      const msg = err instanceof Error ? err.message : 'Unknown error'
-      setConnectionError(`Connection failed: ${msg}`)
-      addToast('error', `Connection failed: ${msg}`)
-      // Do NOT persist the bad URL
+  return (
+    <Panel>
+      <SectionTitle titleEn="General" titleZh="通用" />
+      <FieldGrid>
+        <Field
+          labelEn="Language"
+          labelZh="语言"
+          control={
+            <select
+              value={lang}
+              onChange={(e) => setLang(e.target.value as Lang)}
+              aria-label={tr('Language', '语言')}
+              style={selectStyle()}
+            >
+              <option value="en">English</option>
+              <option value="zh">中文</option>
+            </select>
+          }
+        />
+        <Field
+          labelEn="Timezone"
+          labelZh="时区"
+          control={
+            <div style={readOnlyFieldStyle()}>
+              <span style={{ fontFamily: 'var(--font-mono)' }}>{timezone}</span>
+            </div>
+          }
+        />
+      </FieldGrid>
+    </Panel>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Appearance
+// ---------------------------------------------------------------------------
+
+type ThemeMode = Theme | 'system';
+
+function AppearanceSection() {
+  const tr = useT();
+  const currentTheme = useAppStore((s) => s.theme);
+  const setTheme = useAppStore((s) => s.setTheme);
+  const [mode, setMode] = useState<ThemeMode>(currentTheme);
+
+  // When mode=system, follow the OS preference.
+  useEffect(() => {
+    if (mode !== 'system' || typeof window === 'undefined' || !window.matchMedia) {
+      return;
+    }
+    const mql = window.matchMedia('(prefers-color-scheme: dark)');
+    const apply = () => setTheme(mql.matches ? 'dark' : 'light');
+    apply();
+    mql.addEventListener('change', apply);
+    return () => mql.removeEventListener('change', apply);
+  }, [mode, setTheme]);
+
+  function handleChange(next: ThemeMode) {
+    setMode(next);
+    if (next !== 'system') {
+      setTheme(next);
     }
   }
 
   return (
-    <div className="max-w-2xl space-y-8">
-      <PageHeader title="Settings" description="Dashboard configuration" />
+    <Panel>
+      <SectionTitle titleEn="Appearance" titleZh="外观" />
+      <FieldGrid>
+        <Field
+          labelEn="Theme"
+          labelZh="主题"
+          control={
+            <div
+              role="radiogroup"
+              aria-label={tr('Theme', '主题')}
+              style={{
+                display: 'inline-flex',
+                gap: 'var(--space-2)',
+              }}
+            >
+              <ThemeRadio
+                value="dark"
+                label={tr('Dark', '深色')}
+                icon={<Moon size={14} aria-hidden="true" />}
+                active={mode === 'dark'}
+                onSelect={() => handleChange('dark')}
+              />
+              <ThemeRadio
+                value="light"
+                label={tr('Light', '浅色')}
+                icon={<Sun size={14} aria-hidden="true" />}
+                active={mode === 'light'}
+                onSelect={() => handleChange('light')}
+              />
+              <ThemeRadio
+                value="system"
+                label={tr('System', '跟随系统')}
+                icon={<span style={{ fontSize: 12 }}>⦿</span>}
+                active={mode === 'system'}
+                onSelect={() => handleChange('system')}
+              />
+            </div>
+          }
+        />
+        <Field
+          labelEn="Accent color"
+          labelZh="强调色"
+          control={
+            <div
+              style={{
+                ...readOnlyFieldStyle(),
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 'var(--space-2)',
+              }}
+            >
+              <span
+                aria-hidden="true"
+                style={{
+                  width: 14,
+                  height: 14,
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'var(--accent)',
+                  border: '1px solid var(--border-default)',
+                }}
+              />
+              <span style={{ fontFamily: 'var(--font-mono)' }}>
+                {tr('default blue (read-only)', '默认蓝 (只读)')}
+              </span>
+            </div>
+          }
+        />
+      </FieldGrid>
+    </Panel>
+  );
+}
 
-      {/* Appearance */}
-      <section>
-        <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">Appearance</h2>
-        <p className="text-xs text-[var(--text-tertiary)] mb-4">Customize how Hermes Dashboard looks.</p>
+function ThemeRadio({
+  value,
+  label,
+  icon,
+  active,
+  onSelect,
+}: {
+  value: string;
+  label: string;
+  icon: React.ReactNode;
+  active: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={active}
+      aria-label={label}
+      onClick={onSelect}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 'var(--space-2)',
+        padding: '6px 12px',
+        borderRadius: 'var(--radius-md)',
+        border: active
+          ? '1px solid color-mix(in srgb, var(--accent) 60%, var(--border-default))'
+          : '1px solid var(--border-default)',
+        background: active
+          ? 'color-mix(in srgb, var(--accent) 10%, transparent)'
+          : 'var(--bg-secondary)',
+        color: active ? 'var(--text-primary)' : 'var(--text-secondary)',
+        fontSize: 'var(--text-xs)',
+        fontFamily: 'var(--font-sans)',
+        cursor: 'pointer',
+      }}
+      data-value={value}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
+  );
+}
 
-        <div>
-          <label className="block text-xs text-[var(--text-secondary)] mb-2">Theme</label>
-          <div className="flex gap-3">
-            {(['dark', 'light'] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTheme(t)}
-                className={cn(
-                  'flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-md)] text-sm border transition-colors',
-                  theme === t
-                    ? 'bg-[var(--accent-soft)] text-[var(--accent)] border-[var(--accent)]'
-                    : 'text-[var(--text-secondary)] border-[var(--border-default)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-2)]'
-                )}
+// ---------------------------------------------------------------------------
+// Connection
+// ---------------------------------------------------------------------------
+
+function ConnectionSection() {
+  const tr = useT();
+  const baseUrl = useAppStore((s) => s.baseUrl);
+  const setBaseUrl = useAppStore((s) => s.setBaseUrl);
+  const pushToast = useToastStore((s) => s.push);
+
+  const statusQ = useStatus();
+  const status = statusQ.data;
+
+  const [draftUrl, setDraftUrl] = useState(baseUrl);
+  const [saving, setSaving] = useState(false);
+  const [lastCheck, setLastCheck] = useState<number | null>(null);
+  const [token, setToken] = useState<string>(() =>
+    typeof window !== 'undefined'
+      ? window.__HERMES_SESSION_TOKEN__ ?? ''
+      : '',
+  );
+
+  // Keep the draft in sync when baseUrl is changed externally.
+  useEffect(() => {
+    setDraftUrl(baseUrl);
+  }, [baseUrl]);
+
+  // Track the last successful status fetch.
+  useEffect(() => {
+    if (statusQ.isSuccess) {
+      setLastCheck(Date.now() / 1000);
+    }
+  }, [statusQ.dataUpdatedAt, statusQ.isSuccess]);
+
+  async function handleSave() {
+    const trimmed = draftUrl.trim();
+    if (!trimmed) return;
+    setSaving(true);
+    try {
+      setBaseUrl(trimmed);
+      // Self-test against the new URL immediately.
+      const result = await api.getStatus();
+      pushToast({
+        level: 'success',
+        titleEn: `Connected to Hermes Agent v${result.version}`,
+        titleZh: `已连接 Hermes Agent v${result.version}`,
+      });
+    } catch (err) {
+      pushToast({
+        level: 'error',
+        titleEn: 'Failed to reach new API URL',
+        titleZh: '无法连接新的 API 地址',
+        descEn: formatErrorMessage(err),
+        descZh: formatErrorMessage(err),
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function handleReset() {
+    const def = getDefaultBaseUrl() || DEFAULT_BASE_URL;
+    setDraftUrl(def);
+    setBaseUrl(def);
+    pushToast({
+      level: 'info',
+      titleEn: 'Base URL reset to default',
+      titleZh: '已重置为默认地址',
+    });
+  }
+
+  function handleTokenSet() {
+    if (typeof window !== 'undefined') {
+      window.__HERMES_SESSION_TOKEN__ = token.trim() || null;
+    }
+    pushToast({
+      level: 'success',
+      titleEn: 'Session token set',
+      titleZh: '会话令牌已设置',
+    });
+    void statusQ.refetch();
+  }
+
+  const statusVariant: 'online' | 'offline' | 'unknown' = statusQ.isSuccess
+    ? 'online'
+    : statusQ.isError
+      ? 'offline'
+      : 'unknown';
+
+  const tokenNeeded =
+    typeof window !== 'undefined' &&
+    (window.__HERMES_SESSION_TOKEN__ === null ||
+      window.__HERMES_SESSION_TOKEN__ === '');
+
+  return (
+    <Panel>
+      <SectionTitle titleEn="Connection" titleZh="连接" />
+      <FieldGrid>
+        <Field
+          labelEn="Hermes API URL"
+          labelZh="Hermes API 地址"
+          control={
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 'var(--space-2)',
+              }}
+            >
+              <input
+                type="url"
+                value={draftUrl}
+                onChange={(e) => setDraftUrl(e.target.value)}
+                aria-label={tr('Hermes API URL', 'Hermes API 地址')}
+                placeholder={DEFAULT_BASE_URL}
+                style={inputStyle()}
+                spellCheck={false}
+              />
+              <div
+                style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 'var(--space-2)',
+                }}
               >
-                {t === 'dark' ? <Moon size={16} /> : <Sun size={16} />}
-                <span className="capitalize">{t}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Connection */}
-      <section className="pt-8 border-t border-[var(--border-default)]">
-        <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">Connection</h2>
-        <p className="text-xs text-[var(--text-tertiary)] mb-4">Configure the Hermes Agent backend connection.</p>
-
-        <div>
-          <label className="block text-xs text-[var(--text-secondary)] mb-1.5">Hermes Agent API URL</label>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={apiUrl}
-              onChange={(e) => setApiUrl(e.target.value)}
-              placeholder="http://127.0.0.1:9119"
-              className="flex-1 h-8 px-3 rounded-[var(--radius-md)] text-sm font-[var(--font-mono)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] bg-[var(--bg-surface-2)] border border-[var(--border-default)] focus:border-[var(--border-focus)] focus:outline-none focus:ring-1 focus:ring-[var(--border-focus)]/20 transition-colors"
-            />
-            <Button onClick={saveConnection} disabled={connectionState === 'testing'}>
-              {connectionState === 'testing' ? (
-                <><RefreshCw size={14} className="animate-spin" /> Testing...</>
-              ) : (
-                'Save'
-              )}
-            </Button>
-          </div>
-          <p className="mt-1.5 text-[10px] text-[var(--text-tertiary)]">
-            The URL where your Hermes Agent Dashboard API is running.
-          </p>
-          {connectionState === 'connected' && connectedVersion && (
-            <div className="mt-2 flex items-center gap-1.5 text-xs text-[var(--success)]">
-              <CheckCircle size={14} />
-              <span>Connected — Hermes v{connectedVersion}</span>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  loading={saving}
+                  leftIcon={<Save size={14} aria-hidden="true" />}
+                  onClick={() => {
+                    void handleSave();
+                  }}
+                >
+                  {tr('Save & Test', '保存并测试')}
+                </Button>
+                <Button variant="secondary" size="sm" onClick={handleReset}>
+                  {tr('Reset to default', '重置为默认')}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    void statusQ.refetch();
+                  }}
+                >
+                  {tr('Retry', '重试')}
+                </Button>
+              </div>
             </div>
-          )}
-          {connectionState === 'failed' && connectionError && (
-            <div className="mt-2 flex items-center gap-1.5 text-xs text-[var(--danger)]">
-              <XCircle size={14} />
-              <span>{connectionError}</span>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Agent Info (from /api/status) */}
-      {status && (
-        <section className="pt-8 border-t border-[var(--border-default)]">
-          <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">Agent Info</h2>
-          <p className="text-xs text-[var(--text-tertiary)] mb-4">Live information from the connected Hermes Agent.</p>
-
-          <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-md)] divide-y divide-[var(--border-default)] overflow-hidden">
-            {[
-              ['Agent Version', status.version],
-              ['Release Date', status.release_date],
-              ['Hermes Home', status.hermes_home],
-              ['Config Path', status.config_path],
-              ['Config Version', status.config_version],
-              ['Active Sessions', status.active_sessions],
-              ['Gateway', status.gateway_running ? 'Running' : 'Stopped'],
-            ].map(([label, val]) => (
-              <div key={String(label)} className="flex items-center justify-between px-4 py-3">
-                <span className="text-sm text-[var(--text-secondary)]">{label}</span>
-                <span className="text-sm font-[var(--font-mono)] text-[var(--text-primary)] truncate max-w-[300px]">
-                  {String(val)}
-                  {label === 'Config Version' && status.config_version !== status.latest_config_version && (
-                    <span className="ml-2 text-xs text-[var(--warning)]">(latest: {status.latest_config_version})</span>
+          }
+        />
+        <Field
+          labelEn="Connection status"
+          labelZh="连接状态"
+          control={
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 'var(--space-2)',
+                fontSize: 'var(--text-xs)',
+                color: 'var(--text-secondary)',
+                flexWrap: 'wrap',
+              }}
+            >
+              <StatusDot variant={statusVariant} showLabel />
+              {statusQ.isError ? (
+                <span style={{ color: 'var(--danger)' }}>
+                  {formatErrorMessage(statusQ.error)}
+                </span>
+              ) : null}
+              {lastCheck !== null ? (
+                <span style={{ fontFamily: 'var(--font-mono)' }}>
+                  {tr(
+                    `Last check ${formatRelativeTime(lastCheck, 'en')}`,
+                    `最近检查 ${formatRelativeTime(lastCheck, 'zh')}`,
                   )}
                 </span>
+              ) : null}
+            </div>
+          }
+        />
+        {tokenNeeded || statusQ.isError ? (
+          <Field
+            labelEn="Session token (manual override)"
+            labelZh="会话令牌 (手动覆盖)"
+            help={tr(
+              'Paste the value of window.__HERMES_SESSION_TOKEN__ from the Hermes home page when auto-extraction fails.',
+              '当自动提取失败时,从 Hermes 主页粘贴 window.__HERMES_SESSION_TOKEN__ 的值。',
+            )}
+            control={
+              <div
+                style={{
+                  display: 'flex',
+                  gap: 'var(--space-2)',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                }}
+              >
+                <input
+                  type="password"
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                  aria-label={tr('Session token', '会话令牌')}
+                  placeholder={tr('Paste session token…', '粘贴会话令牌…')}
+                  style={{ ...inputStyle(), minWidth: 240 }}
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+                <Button variant="secondary" size="sm" onClick={handleTokenSet}>
+                  {tr('Apply token', '应用令牌')}
+                </Button>
               </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Config (from /api/config) */}
-      <section className="pt-8 border-t border-[var(--border-default)]">
-        <div className="flex items-center justify-between mb-1">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-[var(--text-primary)]">Configuration</h2>
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--bg-surface-2)] text-[var(--text-tertiary)] font-medium uppercase tracking-wider">
-              Read-only
-            </span>
-          </div>
-          {configLoading && <RefreshCw size={14} className="text-[var(--text-tertiary)] animate-spin" />}
-        </div>
-        <p className="text-xs text-[var(--text-tertiary)] mb-4">Raw configuration from the Hermes Agent. Edit via the config file directly.</p>
-
-        {config ? (
-          <div className="bg-[var(--bg-muted)] border border-[var(--border-default)] rounded-[var(--radius-md)] p-4 overflow-auto max-h-[400px]">
-            <pre className="text-[13px] font-[var(--font-mono)] text-[var(--text-primary)] whitespace-pre-wrap leading-6">
-              {JSON.stringify(config, null, 2).split('\n').map((line, i) => (
-                <div key={i} className="flex">
-                  <span className="inline-block w-9 text-right pr-3 select-none shrink-0 text-[var(--text-tertiary)] tabular-nums">{i + 1}</span>
-                  <span>{line}</span>
-                </div>
-              ))}
-            </pre>
-          </div>
-        ) : (
-          <div className="text-sm text-[var(--text-tertiary)]">
-            {configLoading ? 'Loading configuration...' : 'Unable to load configuration. Is the agent running?'}
-          </div>
-        )}
-      </section>
-
-      {/* About */}
-      <section className="pt-8 border-t border-[var(--border-default)]">
-        <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">About</h2>
-        <p className="text-xs text-[var(--text-tertiary)] mb-4">Hermes Dashboard v0.1.0</p>
-
-        <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-[var(--radius-md)] divide-y divide-[var(--border-default)] overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3">
-            <span className="text-sm text-[var(--text-secondary)]">Dashboard Version</span>
-            <span className="text-sm font-[var(--font-mono)] text-[var(--text-primary)]">0.1.0</span>
-          </div>
-          <div className="flex items-center justify-between px-4 py-3">
-            <span className="text-sm text-[var(--text-secondary)]">License</span>
-            <span className="text-sm text-[var(--text-primary)]">MIT</span>
-          </div>
-          <div className="flex items-center justify-between px-4 py-3">
-            <span className="text-sm text-[var(--text-secondary)]">Author</span>
-            <span className="text-sm text-[var(--text-primary)]">fangnaoke</span>
-          </div>
-          <div className="flex items-center justify-between px-4 py-3">
-            <span className="text-sm text-[var(--text-secondary)]">GitHub</span>
-            <a
-              href="https://github.com/is-spectator/hermes-dashboard"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-sm text-[var(--accent)] hover:underline"
-            >
-              is-spectator/hermes-dashboard <ExternalLink size={12} />
-            </a>
-          </div>
-          <div className="flex items-center justify-between px-4 py-3">
-            <span className="text-sm text-[var(--text-secondary)]">Hermes Agent</span>
-            <a
-              href="https://github.com/NousResearch/hermes-agent"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-sm text-[var(--accent)] hover:underline"
-            >
-              NousResearch/hermes-agent <ExternalLink size={12} />
-            </a>
-          </div>
-        </div>
-      </section>
-    </div>
-  )
+            }
+          />
+        ) : null}
+      </FieldGrid>
+      {status ? <VersionBanner status={status} /> : null}
+    </Panel>
+  );
 }
+
+function VersionBanner({ status }: { status: StatusResponse }) {
+  const tr = useT();
+  return (
+    <div
+      style={{
+        marginTop: 'var(--space-4)',
+        padding: 'var(--space-3) var(--space-4)',
+        background: 'color-mix(in srgb, var(--success) 10%, transparent)',
+        border: '1px solid color-mix(in srgb, var(--success) 30%, transparent)',
+        borderRadius: 'var(--radius-md)',
+        fontSize: 'var(--text-xs)',
+        color: 'var(--success)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--space-2)',
+      }}
+    >
+      <CircleCheck size={14} aria-hidden="true" />
+      <span style={{ fontFamily: 'var(--font-mono)' }}>
+        {tr(
+          `v${status.version} · released ${status.release_date}`,
+          `v${status.version} · 发布日 ${status.release_date}`,
+        )}
+      </span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Configuration (raw JSON viewer / editor)
+// ---------------------------------------------------------------------------
+
+function ConfigurationSection() {
+  const tr = useT();
+  const configQ = useConfig();
+  const putConfig = usePutConfig();
+  const pushToast = useToastStore((s) => s.push);
+
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<string>('');
+  const [parseError, setParseError] = useState<string | null>(null);
+
+  const prettyJson = useMemo(() => {
+    if (!configQ.data) return '';
+    try {
+      return JSON.stringify(configQ.data, null, 2);
+    } catch {
+      return '';
+    }
+  }, [configQ.data]);
+
+  useEffect(() => {
+    if (!editing) {
+      setDraft(prettyJson);
+      setParseError(null);
+    }
+  }, [prettyJson, editing]);
+
+  async function handleApply() {
+    try {
+      const parsed = JSON.parse(draft);
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        setParseError(tr('Config must be a JSON object.', '配置必须是 JSON 对象。'));
+        return;
+      }
+      if (
+        !window.confirm(
+          tr(
+            'Apply these changes to Hermes config? This will call PUT /api/config.',
+            '将这些更改应用到 Hermes 配置?将调用 PUT /api/config。',
+          ),
+        )
+      ) {
+        return;
+      }
+      setParseError(null);
+      await putConfig.mutateAsync(parsed as Record<string, unknown>);
+      setEditing(false);
+    } catch (err) {
+      if (err instanceof SyntaxError) {
+        setParseError(err.message);
+      } else {
+        pushToast({
+          level: 'error',
+          titleEn: 'Failed to apply config',
+          titleZh: '应用配置失败',
+          descEn: formatErrorMessage(err),
+          descZh: formatErrorMessage(err),
+        });
+      }
+    }
+  }
+
+  return (
+    <Panel>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 'var(--space-3)',
+        }}
+      >
+        <SectionTitle titleEn="Configuration" titleZh="配置" inline />
+        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+          {editing ? (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setDraft(prettyJson);
+                  setEditing(false);
+                  setParseError(null);
+                }}
+              >
+                {tr('Cancel', '取消')}
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                loading={putConfig.isPending}
+                onClick={() => {
+                  void handleApply();
+                }}
+              >
+                {tr('Apply', '应用')}
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!configQ.data}
+              onClick={() => setEditing(true)}
+            >
+              {tr('Edit', '编辑')}
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {configQ.isPending ? (
+        <SkeletonLoader height={200} radius="md" />
+      ) : configQ.isError ? (
+        <div
+          style={{
+            padding: 'var(--space-3)',
+            border: '1px solid color-mix(in srgb, var(--danger) 35%, var(--border-default))',
+            borderRadius: 'var(--radius-md)',
+            background: 'color-mix(in srgb, var(--danger) 8%, transparent)',
+            color: 'var(--danger)',
+            fontSize: 'var(--text-xs)',
+          }}
+        >
+          <CircleX
+            size={14}
+            aria-hidden="true"
+            style={{ verticalAlign: 'middle', marginRight: 6 }}
+          />
+          {formatErrorMessage(configQ.error)}
+        </div>
+      ) : editing ? (
+        <>
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            aria-label={tr('Configuration JSON', '配置 JSON')}
+            spellCheck={false}
+            style={{
+              width: '100%',
+              height: 360,
+              background: 'var(--bg-primary)',
+              border: '1px solid var(--border-default)',
+              borderRadius: 'var(--radius-md)',
+              color: 'var(--text-primary)',
+              fontFamily: 'var(--font-mono)',
+              fontSize: 'var(--text-xs)',
+              padding: 'var(--space-3)',
+              resize: 'vertical',
+              outline: 'none',
+            }}
+          />
+          {parseError ? (
+            <div
+              role="alert"
+              style={{
+                marginTop: 'var(--space-2)',
+                color: 'var(--danger)',
+                fontSize: 'var(--text-xs)',
+              }}
+            >
+              {parseError}
+            </div>
+          ) : null}
+        </>
+      ) : (
+        <pre
+          style={{
+            margin: 0,
+            maxHeight: 360,
+            overflow: 'auto',
+            background: 'var(--bg-primary)',
+            border: '1px solid var(--border-default)',
+            borderRadius: 'var(--radius-md)',
+            padding: 'var(--space-3)',
+            fontFamily: 'var(--font-mono)',
+            fontSize: 'var(--text-xs)',
+            color: 'var(--text-primary)',
+            whiteSpace: 'pre',
+          }}
+        >
+          {prettyJson}
+        </pre>
+      )}
+    </Panel>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// About
+// ---------------------------------------------------------------------------
+
+function AboutSection() {
+  const tr = useT();
+  const statusQ = useStatus();
+  const status = statusQ.data;
+
+  return (
+    <Panel>
+      <SectionTitle titleEn="About" titleZh="关于" />
+      <FieldGrid>
+        <Field
+          labelEn="Dashboard version"
+          labelZh="Dashboard 版本"
+          control={
+            <div style={readOnlyFieldStyle()}>
+              <span style={{ fontFamily: 'var(--font-mono)' }}>v0.1.0</span>
+            </div>
+          }
+        />
+        <Field
+          labelEn="License"
+          labelZh="许可证"
+          control={
+            <div style={readOnlyFieldStyle()}>
+              <span style={{ fontFamily: 'var(--font-mono)' }}>MIT</span>
+            </div>
+          }
+        />
+        <Field
+          labelEn="GitHub"
+          labelZh="GitHub"
+          control={
+            <a
+              href="https://github.com/fangnaoke/hermes-dashboard"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 'var(--space-2)',
+                padding: '6px 10px',
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--border-default)',
+                borderRadius: 'var(--radius-md)',
+                color: 'var(--accent)',
+                fontSize: 'var(--text-xs)',
+                textDecoration: 'none',
+              }}
+            >
+              <Github size={14} aria-hidden="true" />
+              fangnaoke/hermes-dashboard
+            </a>
+          }
+        />
+        <Field
+          labelEn="Hermes Agent version"
+          labelZh="Hermes Agent 版本"
+          control={
+            <div style={readOnlyFieldStyle()}>
+              <span style={{ fontFamily: 'var(--font-mono)' }}>
+                {status ? `v${status.version}` : tr('Unknown', '未知')}
+                {status?.release_date ? ` · ${status.release_date}` : ''}
+              </span>
+            </div>
+          }
+        />
+        <Field
+          labelEn="Compatibility"
+          labelZh="兼容性"
+          control={
+            <div style={readOnlyFieldStyle()}>
+              <span style={{ fontFamily: 'var(--font-mono)' }}>
+                {tr('Supports Hermes Agent v0.9.0', '支持 Hermes Agent v0.9.0')}
+              </span>
+            </div>
+          }
+        />
+      </FieldGrid>
+    </Panel>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Layout primitives
+// ---------------------------------------------------------------------------
+
+function SectionTitle({
+  titleEn,
+  titleZh,
+  inline = false,
+}: {
+  titleEn: string;
+  titleZh: string;
+  inline?: boolean;
+}) {
+  const tr = useT();
+  return (
+    <h2
+      style={{
+        margin: 0,
+        marginBottom: inline ? 0 : 'var(--space-3)',
+        fontSize: 'var(--text-base)',
+        fontWeight: 600,
+        color: 'var(--text-primary)',
+      }}
+    >
+      {tr(titleEn, titleZh)}
+    </h2>
+  );
+}
+
+function FieldGrid({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr',
+        gap: 'var(--space-3)',
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function Field({
+  labelEn,
+  labelZh,
+  help,
+  control,
+}: {
+  labelEn: string;
+  labelZh: string;
+  help?: string;
+  control: React.ReactNode;
+}) {
+  const tr = useT();
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'minmax(140px, 200px) 1fr',
+        columnGap: 'var(--space-4)',
+        rowGap: 'var(--space-1)',
+        alignItems: 'start',
+      }}
+    >
+      <div
+        style={{
+          fontSize: 'var(--text-sm)',
+          color: 'var(--text-secondary)',
+          paddingTop: 6,
+        }}
+      >
+        {tr(labelEn, labelZh)}
+      </div>
+      <div>
+        {control}
+        {help ? (
+          <p
+            style={{
+              margin: '4px 0 0',
+              fontSize: 'var(--text-xs)',
+              color: 'var(--text-muted)',
+            }}
+          >
+            {help}
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function inputStyle(): React.CSSProperties {
+  return {
+    height: 36,
+    padding: '0 10px',
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border-default)',
+    borderRadius: 'var(--radius-md)',
+    color: 'var(--text-primary)',
+    fontSize: 'var(--text-sm)',
+    fontFamily: 'var(--font-mono)',
+    outline: 'none',
+    flex: 1,
+    minWidth: 0,
+  };
+}
+
+function selectStyle(): React.CSSProperties {
+  return {
+    height: 36,
+    padding: '0 10px',
+    background: 'var(--bg-secondary)',
+    border: '1px solid var(--border-default)',
+    borderRadius: 'var(--radius-md)',
+    color: 'var(--text-primary)',
+    fontSize: 'var(--text-sm)',
+    fontFamily: 'var(--font-sans)',
+    cursor: 'pointer',
+  };
+}
+
+function readOnlyFieldStyle(): React.CSSProperties {
+  return {
+    height: 36,
+    padding: '0 10px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    background: 'var(--bg-tertiary)',
+    border: '1px solid var(--border-default)',
+    borderRadius: 'var(--radius-md)',
+    color: 'var(--text-secondary)',
+    fontSize: 'var(--text-sm)',
+    minWidth: 140,
+  };
+}
+
+export default SettingsPage;

@@ -1,37 +1,138 @@
-import { Search, X } from 'lucide-react'
-import { cn } from '../lib/utils'
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type InputHTMLAttributes,
+} from 'react';
+import { Loader2, Search } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useDebounce } from '@/lib/useDebounce';
+import { useT } from '@/lib/i18n';
 
-interface SearchInputProps {
-  value: string
-  onChange: (value: string) => void
-  placeholder?: string
-  className?: string
+/**
+ * SearchInput — text input with a left Search icon and an optional right spinner.
+ *
+ * Debounce contract: if `onDebouncedChange` is provided, the callback fires
+ * `debounceMs` after the user stops typing. If `value` is provided, the
+ * component is fully controlled; otherwise it manages its own state and still
+ * emits both `onChange` and `onDebouncedChange`.
+ *
+ * Animation contribution: spinner is 1 loop only while `loading` is true.
+ */
+
+export interface SearchInputProps
+  extends Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'defaultValue'> {
+  value?: string;
+  defaultValue?: string;
+  onChange?: (value: string) => void;
+  onDebouncedChange?: (value: string) => void;
+  debounceMs?: number;
+  loading?: boolean;
+  placeholderEn?: string;
+  placeholderZh?: string;
 }
 
-export default function SearchInput({ value, onChange, placeholder = 'Search...', className }: SearchInputProps) {
-  return (
-    <div className={cn('relative', className)}>
-      <Search
-        size={14}
-        className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]"
-      />
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        aria-label={placeholder}
-        className="w-full h-8 pl-9 pr-8 rounded-[var(--radius-md)] text-sm bg-[var(--bg-surface-2)] border border-[var(--border-default)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:border-[var(--border-focus)] focus:outline-none focus:ring-1 focus:ring-[var(--border-focus)]/20 transition-colors duration-150"
-      />
-      {value && (
-        <button
-          onClick={() => onChange('')}
-          aria-label="Clear search"
-          className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors"
-        >
-          <X size={12} />
-        </button>
-      )}
-    </div>
-  )
-}
+export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(
+  function SearchInput(
+    {
+      value,
+      defaultValue = '',
+      onChange,
+      onDebouncedChange,
+      debounceMs = 300,
+      loading = false,
+      placeholderEn = 'Search…',
+      placeholderZh = '搜索…',
+      className,
+      disabled,
+      ...rest
+    },
+    ref,
+  ) {
+    const tr = useT();
+    const isControlled = value !== undefined;
+    const [internal, setInternal] = useState<string>(value ?? defaultValue);
+    const current = isControlled ? value : internal;
+
+    const debounced = useDebounce(current, debounceMs);
+    const lastEmitted = useRef<string | null>(null);
+
+    useEffect(() => {
+      if (!onDebouncedChange) return;
+      if (lastEmitted.current === debounced) return;
+      lastEmitted.current = debounced;
+      onDebouncedChange(debounced);
+    }, [debounced, onDebouncedChange]);
+
+    const handleChange = useCallback(
+      (event: ChangeEvent<HTMLInputElement>) => {
+        const next = event.target.value;
+        if (!isControlled) setInternal(next);
+        onChange?.(next);
+      },
+      [isControlled, onChange],
+    );
+
+    return (
+      <div
+        className={cn('relative inline-flex items-center w-full', className)}
+        style={{
+          height: 36,
+          borderRadius: 'var(--radius-md)',
+          background: 'var(--bg-secondary)',
+          border: '1px solid var(--border-default)',
+        }}
+      >
+        <Search
+          size={14}
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            left: 10,
+            color: 'var(--text-muted)',
+            pointerEvents: 'none',
+          }}
+        />
+        <input
+          ref={ref}
+          type="search"
+          value={current}
+          onChange={handleChange}
+          disabled={disabled}
+          placeholder={tr(placeholderEn, placeholderZh)}
+          aria-label={tr(placeholderEn, placeholderZh)}
+          className="w-full bg-transparent"
+          style={{
+            height: '100%',
+            paddingLeft: 32,
+            paddingRight: loading ? 32 : 10,
+            color: 'var(--text-primary)',
+            fontSize: 'var(--text-sm)',
+            fontFamily: 'var(--font-sans)',
+            border: 'none',
+            outline: 'none',
+            borderRadius: 'var(--radius-md)',
+          }}
+          {...rest}
+        />
+        {loading ? (
+          <Loader2
+            size={14}
+            aria-hidden="true"
+            className="animate-spin"
+            style={{
+              position: 'absolute',
+              right: 10,
+              color: 'var(--text-muted)',
+            }}
+          />
+        ) : null}
+      </div>
+    );
+  },
+);
+
+export default SearchInput;

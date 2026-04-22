@@ -1,10 +1,62 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
     <title>Hermes Dashboard</title>
+    <!-- Default session token placeholder; Hermes Agent injects the real value when serving via SPA replacement (Mode B). -->
+    <script>
+      window.__HERMES_SESSION_TOKEN__ = null;
+    </script>
+    <!-- Runtime-injected config (Docker envsubst writes window.__HERMES_RUNTIME_CONFIG__ here). Must fail open. -->
+    <script src="/runtime-config.js"></script>
+    <!--
+      FOUC guard: read persisted Zustand state before the React bundle boots so
+      <html data-theme|lang> matches the user's last choice on first paint. If
+      parsing fails for any reason, fall through to the defaults baked into the
+      root element above.
+    -->
+    <script>
+      (function () {
+        try {
+          // URL overrides come first — useful for screenshots, previews, and
+          // sharing direct links to "the dashboard in light mode", etc. These
+          // do not persist: they seed the store only for this page load.
+          var url = new URL(window.location.href);
+          var qTheme = url.searchParams.get('theme');
+          var qLang = url.searchParams.get('lang');
+          if (qTheme === 'dark' || qTheme === 'light') {
+            document.documentElement.setAttribute('data-theme', qTheme);
+          }
+          if (qLang === 'en' || qLang === 'zh') {
+            document.documentElement.setAttribute(
+              'lang',
+              qLang === 'zh' ? 'zh-CN' : 'en',
+            );
+          }
+          if (qTheme || qLang) return;
+
+          var raw = localStorage.getItem('hermes-dashboard:app');
+          if (!raw) return;
+          var parsed = JSON.parse(raw);
+          var state = parsed && parsed.state;
+          if (!state) return;
+          if (state.theme === 'dark' || state.theme === 'light') {
+            document.documentElement.setAttribute('data-theme', state.theme);
+          }
+          if (state.lang === 'en' || state.lang === 'zh') {
+            document.documentElement.setAttribute(
+              'lang',
+              state.lang === 'zh' ? 'zh-CN' : 'en',
+            );
+          }
+        } catch (_e) {
+          /* ignore — defaults already applied */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

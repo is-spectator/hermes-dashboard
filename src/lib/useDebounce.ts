@@ -1,17 +1,17 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react';
 
 /**
- * Debounce a value by the given delay (default 300 ms).
- * Returns the debounced value which only updates after the caller
- * stops changing the input for `delay` milliseconds.
+ * Returns `value` delayed by `delay` ms. Cancels the pending timer if `value`
+ * changes again before it fires. Uses setTimeout (not setInterval, per PRD
+ * §6.5 performance guardrails).
  */
-export function useDebounce<T>(value: T, delay = 300): T {
-  const [debounced, setDebounced] = useState(value)
+export function useDebounce<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value);
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delay)
-    return () => clearTimeout(timer)
-  }, [value, delay])
+    const handle = window.setTimeout(() => setDebounced(value), delay);
+    return () => window.clearTimeout(handle);
+  }, [value, delay]);
 
-  return debounced
+  return debounced;
 }

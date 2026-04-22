@@ -1,36 +1,132 @@
-import { cn } from '../lib/utils'
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
+/**
+ * Button — the only way to render a clickable rectangle in this app.
+ *
+ * Animation contribution: none (only hover/focus transitions via CSS, <= 150ms).
+ *
+ * Styling strategy: each variant declares its own background/text/border via
+ * inline style hooked to tokens, because Tailwind v4 custom theme colors don't
+ * cover every shade we need (hover states etc) without listing each alpha
+ * separately. Focus ring is global via the :focus-visible rule in index.css.
+ */
 
-const variantClasses: Record<ButtonVariant, string> = {
-  primary:
-    'bg-[var(--accent)] text-white hover:opacity-90',
-  secondary:
-    'bg-[var(--bg-surface)] border border-[var(--border-default)] text-[var(--text-primary)] hover:bg-[var(--bg-surface-2)]',
-  ghost:
-    'bg-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-surface-2)] hover:text-[var(--text-primary)]',
-  danger:
-    'bg-[var(--danger-soft)] text-[var(--danger)] border border-[var(--danger)]/20 hover:bg-[var(--danger)]/20',
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+export type ButtonSize = 'sm' | 'md' | 'lg';
+
+export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  loading?: boolean;
+  /** Left-side icon node (lucide component, etc). Hidden while loading. */
+  leftIcon?: ReactNode;
+  /** Right-side icon node. */
+  rightIcon?: ReactNode;
 }
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: ButtonVariant
-  size?: 'sm' | 'md'
-  children: React.ReactNode
+const SIZE_CLASSES: Record<ButtonSize, string> = {
+  sm: 'h-7 px-2 text-xs',
+  md: 'h-9 px-3 text-sm',
+  lg: 'h-11 px-4 text-base',
+};
+
+interface VariantStyle {
+  background: string;
+  color: string;
+  border: string;
+  hoverBackground: string;
 }
 
-export default function Button({ variant = 'primary', size = 'md', className, children, ...props }: ButtonProps) {
+const VARIANT_STYLES: Record<ButtonVariant, VariantStyle> = {
+  primary: {
+    background: 'var(--accent)',
+    color: '#ffffff',
+    border: '1px solid transparent',
+    hoverBackground: 'var(--accent-muted)',
+  },
+  secondary: {
+    background: 'var(--bg-secondary)',
+    color: 'var(--text-primary)',
+    border: '1px solid var(--border-default)',
+    hoverBackground: 'var(--bg-tertiary)',
+  },
+  ghost: {
+    background: 'transparent',
+    color: 'var(--text-secondary)',
+    border: '1px solid transparent',
+    hoverBackground: 'var(--bg-tertiary)',
+  },
+  danger: {
+    background: 'var(--danger)',
+    color: '#ffffff',
+    border: '1px solid transparent',
+    hoverBackground: 'color-mix(in srgb, var(--danger) 80%, black)',
+  },
+};
+
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  {
+    variant = 'primary',
+    size = 'md',
+    loading = false,
+    leftIcon,
+    rightIcon,
+    disabled,
+    className,
+    children,
+    style,
+    onMouseEnter,
+    onMouseLeave,
+    ...rest
+  },
+  ref,
+) {
+  const isDisabled = disabled || loading;
+  const variantStyle = VARIANT_STYLES[variant];
+
   return (
     <button
+      ref={ref}
+      type={rest.type ?? 'button'}
+      disabled={isDisabled}
+      aria-busy={loading || undefined}
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-[var(--radius-md)] font-medium transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-focus)] disabled:opacity-50 disabled:pointer-events-none',
-        size === 'sm' ? 'h-7 px-2.5 text-xs' : 'h-8 px-3 text-sm',
-        variantClasses[variant],
-        className
+        'inline-flex items-center justify-center gap-2 rounded-md font-medium',
+        'transition-colors duration-150',
+        'disabled:cursor-not-allowed disabled:opacity-50',
+        SIZE_CLASSES[size],
+        className,
       )}
-      {...props}
+      style={{
+        background: variantStyle.background,
+        color: variantStyle.color,
+        border: variantStyle.border,
+        fontFamily: 'var(--font-sans)',
+        ...style,
+      }}
+      onMouseEnter={(event) => {
+        if (!isDisabled) {
+          event.currentTarget.style.background = variantStyle.hoverBackground;
+        }
+        onMouseEnter?.(event);
+      }}
+      onMouseLeave={(event) => {
+        event.currentTarget.style.background = variantStyle.background;
+        onMouseLeave?.(event);
+      }}
+      {...rest}
     >
+      {loading ? (
+        <Loader2 className="animate-spin" size={14} aria-hidden="true" />
+      ) : (
+        leftIcon
+      )}
       {children}
+      {!loading && rightIcon}
     </button>
-  )
-}
+  );
+});
+
+export default Button;

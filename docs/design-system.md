@@ -1,207 +1,232 @@
-# Design System
+# Hermes Dashboard — Design System
 
-Reference for the Hermes Dashboard visual language. All tokens are defined in `src/styles/tokens.css`.
+> Scope: this document mirrors the tokens, typography, spacing, radius, and motion
+> rules actually implemented in `src/styles/tokens.css` and referenced by PRD v2.0
+> (`docs/hermes-dashboard-prd-v2.md` §5 and §6). When PRD and code disagree, code
+> wins and this document is the reconciliation point.
+
+## Introduction
+
+The design bar is **Terminal-Luxury**: the information density and monospaced numerals of a good terminal, paired with the restraint and motion craft of Linear / Vercel / Raycast. Every token is a CSS custom property defined in `src/styles/tokens.css`; the same file bridges those vars into Tailwind v4's theme layer via an `@theme inline` block, so business code can reach for either `var(--bg-secondary)` or the utility class `bg-secondary` and get the same live value.
+
+Two themes ship: Dark (default) and Light. Both live in the same file, scoped by `:root[data-theme='dark']` and `:root[data-theme='light']`. Switching is a single `data-theme` write driven by `useAppStore`.
+
+For the page-by-page application of this system, see PRD §4 (page specifications) and the component reference in `docs/components.md`.
+
+---
 
 ## Color Tokens
 
-### Dark Theme (default)
+### Surfaces
 
-| Token | Value | Usage |
-|---|---|---|
-| `--bg-primary` | `#050508` | Page background |
-| `--bg-secondary` | `rgba(255,255,255,0.03)` | Card/surface background |
-| `--bg-tertiary` | `rgba(255,255,255,0.06)` | Elevated surface, hover states |
-| `--bg-elevated` | `rgba(255,255,255,0.05)` | Popovers, dropdowns |
-| `--border-default` | `rgba(255,255,255,0.08)` | Card borders, dividers |
-| `--border-subtle` | `rgba(255,255,255,0.04)` | Inner dividers |
-| `--border-glow` | `rgba(56,189,248,0.2)` | Focused/active border |
-| `--text-primary` | `#e2e8f0` | Body text, headings |
-| `--text-secondary` | `#94a3b8` | Labels, descriptions |
-| `--text-muted` | `#475569` | Placeholders, disabled text |
-| `--accent` | `#38bdf8` | Primary action, links, neon glow |
-| `--accent-muted` | `#0ea5e9` | Hover state for accent |
-| `--accent-subtle` | `rgba(56,189,248,0.08)` | Accent tint background |
-| `--success` | `#34d399` | Online, connected, ok |
-| `--warning` | `#fbbf24` | Degraded, attention |
-| `--danger` | `#f87171` | Error, offline, destructive |
-| `--info` | `#38bdf8` | Informational highlights |
+| Token              | Dark     | Light    | Purpose                                                         |
+| ------------------ | -------- | -------- | --------------------------------------------------------------- |
+| `--bg-primary`     | `#09090b` | `#ffffff` | Page background (body).                                          |
+| `--bg-secondary`   | `#18181b` | `#f4f4f5` | Cards, panels, input fields.                                     |
+| `--bg-tertiary`    | `#27272a` | `#e4e4e7` | Hover state on rows and buttons; icon backplates.                |
+| `--bg-elevated`    | `#1c1c1f` | `#ffffff` | Drawers, tooltips, toast viewport — anything in the top-layer. |
 
-### Light Theme
+### Borders
 
-Applied via `data-theme="light"` on the root element.
+| Token              | Dark     | Light    | Purpose                                      |
+| ------------------ | -------- | -------- | -------------------------------------------- |
+| `--border-default` | `#27272a` | `#d4d4d8` | Card border, input border, divider.         |
+| `--border-subtle`  | `#1f1f23` | `#e4e4e7` | Table row separators; soft section breaks.  |
 
-| Token | Value |
-|---|---|
-| `--bg-primary` | `#f8fafc` |
-| `--text-primary` | `#0f172a` |
-| `--text-secondary` | `#64748b` |
-| `--text-muted` | `#94a3b8` |
-| `--accent` | `#0ea5e9` |
-| `--success` | `#10b981` |
-| `--warning` | `#f59e0b` |
-| `--danger` | `#ef4444` |
+### Text
 
-Light theme removes neon text glows and uses lighter shadows and reduced glass opacity.
+| Token              | Dark     | Light    | Contrast (vs `--bg-primary`) | Intended use                                            |
+| ------------------ | -------- | -------- | ----------------------------- | ------------------------------------------------------- |
+| `--text-primary`   | `#fafafa` | `#09090b` | ~19 : 1                       | Body copy, headings, row values.                        |
+| `--text-secondary` | `#a1a1aa` | `#52525b` | ~7.7 : 1                      | Captions, metadata, section labels.                    |
+| `--text-muted`     | `#52525b` | `#a1a1aa` | **~2.57 : 1** — below WCAG AA | **Decorative only** — placeholders, timestamps, DEBUG log level, disabled controls. Never use for body copy. |
+
+### Semantic
+
+| Token              | Dark     | Light    | Purpose                                                     |
+| ------------------ | -------- | -------- | ----------------------------------------------------------- |
+| `--accent`         | `#3b82f6` | `#2563eb` | Primary action color, link color, selected state fill.      |
+| `--accent-muted`   | `#1d4ed8` | `#1d4ed8` | Accent hover state.                                          |
+| `--success`        | `#22c55e` | `#16a34a` | Connected / healthy — green pulse, configured provider edge. |
+| `--warning`        | `#eab308` | `#ca8a04` | Degraded / warning — amber pulse, waiting banner.            |
+| `--danger`         | `#ef4444` | `#dc2626` | Offline / error — red left-border on ERROR log lines, delete button. |
+| `--focus-ring`     | rgba(59,130,246,0.45) | rgba(37,99,235,0.45) | 2px outline on `:focus-visible` across the app.         |
+
+**Contrast note (PRD §F5 / REVIEW_PHASE_5.md §F5):** `--text-muted` intentionally sits below WCAG AA (computed ~2.57 : 1 dark, ~2.56 : 1 light). It is _only_ used for secondary, dismiss-by-design surfaces — timestamps in the Sessions table, placeholder glyphs, the version line in the sidebar footer, disabled DEBUG log level, and form-help micro-copy. Primary readable text always uses `--text-primary` (~19 : 1) or `--text-secondary` (~7.7 : 1). Reviewers: flag any use of `--text-muted` on interactive controls or body-length prose.
+
+### Tailwind v4 bridge
+
+The `@theme inline { ... }` block in `tokens.css` exposes every color token as a Tailwind theme color:
+
+```css
+@theme inline {
+  --color-bg-primary:   var(--bg-primary);
+  --color-bg-secondary: var(--bg-secondary);
+  --color-text-primary: var(--text-primary);
+  --color-accent:       var(--accent);
+  --color-success:      var(--success);
+  /* … etc. */
+}
+```
+
+After this bridge, utility classes like `bg-secondary` / `text-primary` / `border-default` resolve to the live CSS var — so theme switching is still a single `data-theme` attribute write; no rebuild of utility classes needed.
+
+---
 
 ## Typography
 
-### Font Stacks
+### Font stacks
 
-| Token | Stack |
-|---|---|
-| `--font-sans` | `"Geist Sans", system-ui, -apple-system, sans-serif` |
-| `--font-mono` | `"Geist Mono", "JetBrains Mono", ui-monospace, monospace` |
+| Token         | Stack                                                                                                    | Usage                                                        |
+| ------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `--font-sans` | `'Geist Sans', system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif`                  | All UI chrome — nav, headings, body copy, buttons, toasts. |
+| `--font-mono` | `'Geist Mono', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace`              | Metric card numerals, log lines, session IDs, timestamps, env keys, cron expressions. |
 
-### Size Scale
+Fonts are self-hosted via `@fontsource/geist-sans` and `@fontsource/geist-mono` (sans weights 400/500/600, mono weights 400/500). No CDN dependency. Chinese characters fall through to the system (PingFang SC on macOS, Microsoft YaHei on Windows) — we do not ship a CJK font to keep the CSS budget under 15 KB gz.
 
-| Token | Size | Typical use |
-|---|---|---|
-| `--text-xs` | 0.8125rem (13px) | Badges, captions |
-| `--text-sm` | 0.9375rem (15px) | Table cells, secondary text |
-| `--text-base` | 1.0625rem (17px) | Body text |
-| `--text-lg` | 1.1875rem (19px) | Section headings |
-| `--text-xl` | 1.375rem (22px) | Page headings |
-| `--text-2xl` | 1.625rem (26px) | Hero metric values |
+### Size scale
 
-In practice most components use Tailwind size classes (`text-xs`, `text-sm`, `text-2xl`) rather than the custom property tokens directly. The token scale aligns with Tailwind's defaults.
+| Token         | Size (rem)   | px  | Use                                                     |
+| ------------- | ------------ | --- | ------------------------------------------------------- |
+| `--text-xs`   | 0.75 rem     | 12  | Badges, captions, timestamps, sidebar labels.           |
+| `--text-sm`   | 0.875 rem    | 14  | Table body, form inputs, body copy default.             |
+| `--text-base` | 1 rem        | 16  | Rare — drawer body copy, long-form descriptions.        |
+| `--text-lg`   | 1.125 rem    | 18  | Section titles within a panel.                           |
+| `--text-xl`   | 1.25 rem     | 20  | Page title (`<h1>`) in `PageHeader`.                    |
+| `--text-2xl`  | 1.5 rem      | 24  | Metric card big numbers.                                 |
+
+Line height is not tokenised; pages set it inline at 1.2 – 1.6 depending on density. Letter-spacing on all-caps section labels is `0.04em`; page titles use `-0.01em`.
+
+---
 
 ## Spacing
 
-All spacing follows a **4px base grid**.
+A strict 4 px grid. Tokens are defined for every multiple from 1 to 16:
 
-| Token | Value |
-|---|---|
-| `--space-1` | 4px |
-| `--space-2` | 8px |
-| `--space-3` | 12px |
-| `--space-4` | 16px |
-| `--space-5` | 20px |
-| `--space-6` | 24px |
-| `--space-8` | 32px |
-| `--space-10` | 40px |
-| `--space-12` | 48px |
-| `--space-16` | 64px |
+| Token        | rem      | px  |
+| ------------ | -------- | --- |
+| `--space-1`  | 0.25     | 4   |
+| `--space-2`  | 0.5      | 8   |
+| `--space-3`  | 0.75     | 12  |
+| `--space-4`  | 1        | 16  |
+| `--space-5`  | 1.25     | 20  |
+| `--space-6`  | 1.5      | 24  |
+| `--space-8`  | 2        | 32  |
+| `--space-10` | 2.5      | 40  |
+| `--space-12` | 3        | 48  |
+| `--space-14` | 3.5      | 56  |
+| `--space-16` | 4        | 64  |
 
-Use Tailwind spacing utilities (`p-4`, `gap-3`, `mt-6`) which map to the same 4px grid.
+Anything outside this scale should be flagged in review. The only exceptions currently in code are icon-specific pixel values (`width: 36; height: 36` on icon tiles inside `GatewayCard` / `ProviderCard`) and the fixed drawer width (`480 px`), both of which are component-local and would be noisy as tokens.
+
+---
 
 ## Border Radius
 
-| Token | Value | Usage |
-|---|---|---|
-| `--radius-sm` | 4px | Badges, small chips |
-| `--radius-md` | 6px | Buttons, inputs |
-| `--radius-lg` | 10px | Cards, panels |
-| `--radius-xl` | 14px | Modals, large containers |
+| Token          | Value | Use                                                        |
+| -------------- | ----- | ---------------------------------------------------------- |
+| `--radius-sm`  | 4 px  | Small chips, scrollbars, subtle hover pills.               |
+| `--radius-md`  | 6 px  | Buttons, inputs, dropdown surfaces.                        |
+| `--radius-lg`  | 8 px  | Cards, panels, DataTable wrapper, empty-state icon plate.  |
+| `--radius-xl`  | 12 px | Drawers, modals (reserved for future modal primitive).     |
 
-## Shadows and Glows
+Tailwind v4 also bridges these through `@theme inline` so `rounded-md` / `rounded-lg` / `rounded-xl` map to the same tokens.
 
-### Shadows
+---
 
-| Token | Usage |
-|---|---|
-| `--shadow-sm` | Subtle lift |
-| `--shadow-md` | Cards, dropdowns |
-| `--shadow-lg` | Modals, drawers |
+## Layout constants
 
-### Glow Effects
+| Token                   | Value  | Use                                          |
+| ----------------------- | ------ | -------------------------------------------- |
+| `--sidebar-w-collapsed` | 64 px  | Default sidebar width on desktop.            |
+| `--sidebar-w-expanded`  | 200 px | Sidebar width after hover / click expand.    |
+| `--header-h`            | 56 px  | Top header strip height on desktop.          |
 
-| Token | Usage |
-|---|---|
-| `--glow-accent` | Subtle accent aura |
-| `--glow-accent-strong` | Active/focused accent elements |
-| `--glow-success` | Status indicators (online) |
-| `--glow-danger` | Error states |
-| `--glow-warning` | Warning states |
-| `--inner-glow` | Inset highlight on glass cards |
-| `--card-hover-shadow` | Card hover state |
+---
 
-### Neon Text Glows
-
-| Token | Usage |
-|---|---|
-| `--text-glow-accent` | Accent headings, hero values |
-| `--text-glow-success` | Success metric text |
-| `--text-glow-danger` | Danger metric text |
-
-Light theme sets all text glows to `none`.
-
-## Glass Effect
-
-The glassmorphism pattern is defined by three tokens:
-
-| Token | Dark | Light |
-|---|---|---|
-| `--glass-bg` | `rgba(255,255,255,0.03)` | `rgba(255,255,255,0.6)` |
-| `--glass-border` | `1px solid rgba(255,255,255,0.08)` | `1px solid rgba(0,0,0,0.06)` |
-| `--glass-blur` | `blur(12px)` | `blur(12px)` |
-
-Standard glass card pattern:
-
-```css
-background: var(--glass-bg);
-border: var(--glass-border);
-backdrop-filter: var(--glass-blur);
--webkit-backdrop-filter: var(--glass-blur);
-```
-
-## Animation System
+## Motion
 
 ### Keyframes
 
-| Name | Description | Duration |
-|---|---|---|
-| `pulse-slow` | Opacity pulse (1 to 0.6) | Continuous |
-| `pulse-fast` | Faster opacity pulse (1 to 0.4) | Continuous |
-| `border-breathe` | Success border color oscillation | Continuous |
-| `neon-border-breathe` | Accent border + shadow oscillation | Continuous |
-| `fade-in-up` | Fade in with 8px upward slide | 150ms |
-| `slide-in-right` | Slide in from right edge | 300ms |
-| `shimmer` | Background shimmer for loading skeletons | 1.5s |
-| `glow-pulse` | Opacity oscillation for glow elements | Continuous |
-| `gradient-shift` | Background gradient position shift | Continuous |
-| `status-pulse` | Scale-up + fade-out ring for status dots | 2s |
-| `status-glow` | Box-shadow intensity oscillation | Continuous |
-| `slide-accent-in` | Vertical scale-in for accent bars | Short |
-| `drawer-in` | Slide from right with spring easing | 300ms |
-| `neon-flicker` | Subtle opacity flicker (neon effect) | Continuous |
+All seven keyframes are defined in `tokens.css`. Per PRD §6.5, they animate only `opacity` and `transform` (compositor-only), with one exception — `border-breathe` animates `outline-color` on a fixed 2 px transparent outline; outline color changes on composited layers do not trigger layout or paint on the element itself, so this stays within the "composited only" spirit.
 
-### Transition Tokens
+| Name               | Animates                 | Duration        | Easing           | Iteration  |
+| ------------------ | ------------------------ | --------------- | ---------------- | ---------- |
+| `pulse-slow`       | `opacity 1 ↔ 0.6`        | 2 s             | ease-in-out      | infinite   |
+| `pulse-fast`       | `opacity 1 ↔ 0.4`        | 0.8 s           | ease-in-out      | infinite   |
+| `border-breathe`   | outline-color opacity 15% ↔ 45% | 3 s       | ease-in-out      | infinite   |
+| `fade-in-up`       | `opacity 0→1 + translateY 8px→0` | 150 ms    | ease-out         | 1 (both)   |
+| `slide-in-right`   | `translateX 100%→0`      | 200 ms          | ease-out         | 1 (both)   |
+| `skeleton-shimmer` | `background-position -200%→200%` on a 200% gradient | 1.5 s | linear           | infinite   |
 
-| Token | Value |
-|---|---|
-| `--transition-fast` | `150ms ease-out` |
-| `--transition-normal` | `200ms ease-out` |
-| `--transition-slow` | `300ms ease-out` |
-| `--transition-spring` | `300ms cubic-bezier(0.34, 1.56, 0.64, 1)` |
+### Utility classes
 
-### Reduced Motion
+Components never write animations inline — they opt into a utility class defined in `tokens.css`:
 
-All animations and transitions are collapsed to near-zero duration when the user has `prefers-reduced-motion: reduce` enabled:
+| Class                | Keyframe         | Typical caller                                 |
+| -------------------- | ---------------- | ---------------------------------------------- |
+| `u-pulse-slow`       | pulse-slow       | `StatusDot` when `variant === 'online'`.      |
+| `u-pulse-fast`       | pulse-fast       | `StatusDot` when `variant === 'degraded'`.    |
+| `u-border-breathe`   | border-breathe   | `GatewayCard` / `ProviderCard` when connected. |
+| `u-fade-in-up`       | fade-in-up       | `PageTransition`, `Toast`, list item reveal.  |
+| `u-slide-in`         | slide-in-right   | `SideDrawer` content panel entrance.          |
+| `u-shimmer`          | skeleton-shimmer | `SkeletonLoader`.                              |
+
+### Reduced motion
 
 ```css
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 ```
 
-## Component List
+This single rule downgrades every animation and transition in the app to effectively zero, and StatCard's `useCountUp` hook additionally checks `matchMedia('(prefers-reduced-motion: reduce)').matches` to skip the RAF loop entirely (so the final value appears immediately instead of animating through zero at 0.01 ms per frame). A test (`src/test/__tests__/reduced-motion.test.tsx`) verifies the StatCard path.
 
-| Component | Variants | Notes |
-|---|---|---|
-| Badge | success, warning, danger, info, neutral / filled, outline | Status labels |
-| Button | primary, secondary, ghost, danger / sm, md | Actions |
-| DataTable | Generic `<T>` | Sortable table with loading/empty states |
-| EmptyState | -- | Centered icon + message + optional action |
-| MetricCard | -- | Count-up animated value with icon |
-| PageTransition | -- | Route-level fade-in-up wrapper |
-| ProviderCard | oauth, api_key | Key management with expand/collapse |
-| SearchInput | -- | Input with focus glow and clear button |
-| SideDrawer | -- | Right-slide overlay panel |
-| SkeletonLoader | -- | Shimmer loading placeholder |
-| StatusDot | online, degraded, offline, unknown / sm, md | Status indicator with optional label |
-| Toast (ToastContainer) | success, error | Stacked notification toasts |
+### Animation budget
 
-See [docs/components.md](components.md) for props and usage examples.
+PRD §6.5 caps simultaneous loops at **five per screen**. Current inventory per visible page is logged in component JSDoc headers (search for `Animation contribution` comments). Worst case today is Overview: 1 header ConnectionDot + up to 4 GatewayCard breathes + per-card StatusDots. If a future change risks exceeding 5, add a dev-mode assertion or rework the page to stagger animations.
+
+---
+
+## Usage rules
+
+### When to reach for `var(--token)` directly
+
+- Inline styles in component `style={{ ... }}` blocks (because Tailwind v4 doesn't compile inline props).
+- Custom gradients, `color-mix(...)` expressions, or `outline-color` animations.
+- Anywhere you need the raw value (`calc(var(--space-5) + 4px)` etc.).
+
+### When to use the Tailwind v4 utility
+
+- Short-hand layout: `flex`, `grid`, `gap`, padding, margin. (These don't need token bridging.)
+- Simple color application where the utility name is crisper than the inline style: `bg-secondary`, `text-primary`, `border-default`.
+- Classes that combine multiple responsive variants.
+
+### Forbidden
+
+- **Hex values in component files.** Code reviewers will reject `color: '#09090b'` — use `color: 'var(--text-primary)'`.
+- **New one-off animations.** If you need a new motion language, add it as a keyframe + utility class in `tokens.css` and update this document.
+- **New colors without tokens.** Adding `color: '#8b5cf6'` for a special button is a design-system change — open a PR with both themes defined, or find a semantic token that already fits.
+
+### Adding a new token
+
+1. Define the CSS custom property in both `:root` (dark) and `:root[data-theme='light']` within `src/styles/tokens.css`.
+2. If the token is a color you want available as a Tailwind utility, mirror it in the `@theme inline { ... }` block (`--color-<name>: var(--<name>);`).
+3. Document it in the relevant table above.
+4. If it participates in motion, document the animation contribution and durations in the relevant component JSDoc.
+
+---
+
+## References
+
+- PRD v2.0 §5 (Design System) / §6 (Dynamic Aesthetics): `docs/hermes-dashboard-prd-v2.md`
+- Implementation: `src/styles/tokens.css`
+- Component usage: `docs/components.md`
+- Phase 5 review findings (contrast, animation inventory): `REVIEW_PHASE_5.md`

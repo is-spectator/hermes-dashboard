@@ -1,100 +1,232 @@
-import { cn } from '../lib/utils'
-import SkeletonLoader from './SkeletonLoader'
-import EmptyState from './EmptyState'
+import {
+  type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
+} from 'react';
+import { cn } from '@/lib/utils';
+import { useT } from '@/lib/i18n';
+import { SkeletonLoader } from '@/components/SkeletonLoader';
+import { EmptyState } from '@/components/EmptyState';
 
-export interface Column<T> {
-  key: string
-  header: string
-  width?: string
-  render: (row: T) => React.ReactNode
+/**
+ * DataTable — generic table with bilingual headers, selection, keyboard nav,
+ * loading skeleton, and empty state.
+ *
+ * Animation contribution: N shimmer loops only while loading. Zero otherwise.
+ *
+ * Accessibility:
+ *   - Whole table uses semantic <table>; rows are real <tr>s so screen
+ *     readers get column/row headers.
+ *   - When `onRowClick` is set, rows get role="button" + tabIndex=0 so they
+ *     can be focused with Tab and triggered with Enter/Space.
+ */
+
+export type Density = 'comfortable' | 'compact';
+
+export interface DataTableColumn<T> {
+  key: string;
+  /** Explicit English/Chinese headers so callers don't need to pre-translate. */
+  headerEn: string;
+  headerZh: string;
+  /** Custom render — falls back to `row[col.key]` stringified. */
+  render?: (row: T, index: number) => ReactNode;
+  /** Optional header cell extras (alignment, width, etc). */
+  className?: string;
+  /** width utility (e.g. "w-24"). */
+  widthClassName?: string;
 }
 
-interface DataTableProps<T> {
-  columns: Column<T>[]
-  data: T[]
-  loading?: boolean
-  emptyMessage?: string
-  emptyIcon?: React.ReactNode
-  onRowClick?: (row: T) => void
-  rowKey: (row: T) => string
+export interface DataTableProps<T> {
+  columns: DataTableColumn<T>[];
+  rows: T[];
+  keyExtractor: (row: T, index: number) => string;
+  onRowClick?: (row: T, index: number) => void;
+  selectedKey?: string;
+  loading?: boolean;
+  /** Override the default EmptyState placement (e.g. custom message). */
+  emptyContent?: ReactNode;
+  density?: Density;
+  className?: string;
 }
 
-export default function DataTable<T>({
+export function DataTable<T>({
   columns,
-  data,
-  loading = false,
-  emptyMessage = 'No data found',
-  emptyIcon,
+  rows,
+  keyExtractor,
   onRowClick,
-  rowKey,
+  selectedKey,
+  loading = false,
+  emptyContent,
+  density = 'comfortable',
+  className,
 }: DataTableProps<T>) {
-  if (loading) {
-    return (
-      <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] overflow-hidden">
-        <div className="p-4 space-y-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <SkeletonLoader key={i} className="h-10 w-full" />
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  if (data.length === 0) {
-    return (
-      <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-12">
-        <EmptyState message={emptyMessage} icon={emptyIcon} />
-      </div>
-    )
-  }
+  const tr = useT();
+  const rowHeight = density === 'compact' ? 36 : 48;
 
   return (
-    <div className="rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full" aria-label="Data table">
-          <thead>
-            <tr className="bg-[var(--bg-surface-2)]">
-              {columns.map((col) => (
-                <th
-                  key={col.key}
-                  className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-[var(--text-tertiary)]"
-                  style={col.width ? { width: col.width } : undefined}
-                >
-                  {col.header}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((row) => (
-              <tr
-                key={rowKey(row)}
-                onClick={() => onRowClick?.(row)}
-                className={cn(
-                  'border-b border-[var(--border-default)] transition-colors duration-100',
-                  onRowClick && 'cursor-pointer hover:bg-[var(--bg-surface-2)]'
-                )}
-                {...(onRowClick ? {
-                  role: 'button' as const,
-                  tabIndex: 0,
-                  onKeyDown: (e: React.KeyboardEvent<HTMLTableRowElement>) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      onRowClick(row)
-                    }
-                  },
-                } : {})}
+    <div
+      className={cn('overflow-auto', className)}
+      style={{
+        border: '1px solid var(--border-default)',
+        borderRadius: 'var(--radius-lg)',
+        background: 'var(--bg-secondary)',
+      }}
+    >
+      <table
+        style={{
+          width: '100%',
+          borderCollapse: 'separate',
+          borderSpacing: 0,
+          tableLayout: 'auto',
+        }}
+      >
+        <thead>
+          <tr>
+            {columns.map((col) => (
+              <th
+                key={col.key}
+                scope="col"
+                className={cn(col.className, col.widthClassName)}
+                style={{
+                  textAlign: 'left',
+                  fontSize: 'var(--text-xs)',
+                  color: 'var(--text-secondary)',
+                  fontWeight: 500,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                  padding: '10px var(--space-4)',
+                  background: 'var(--bg-secondary)',
+                  borderBottom: '1px solid var(--border-default)',
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 1,
+                }}
               >
-                {columns.map((col) => (
-                  <td key={col.key} className="px-4 py-3 text-sm text-[var(--text-primary)]">
-                    {col.render(row)}
-                  </td>
-                ))}
-              </tr>
+                {tr(col.headerEn, col.headerZh)}
+              </th>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </tr>
+        </thead>
+
+        <tbody>
+          {loading ? (
+            <LoadingRows columns={columns} rowHeight={rowHeight} />
+          ) : rows.length === 0 ? (
+            <tr>
+              <td colSpan={columns.length}>
+                {emptyContent ?? (
+                  <EmptyState titleEn="No results" titleZh="暂无结果" />
+                )}
+              </td>
+            </tr>
+          ) : (
+            rows.map((row, index) => {
+              const key = keyExtractor(row, index);
+              const isSelected = selectedKey === key;
+              const interactive = Boolean(onRowClick);
+
+              const handleKeyDown = (event: ReactKeyboardEvent<HTMLTableRowElement>) => {
+                if (!interactive) return;
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onRowClick?.(row, index);
+                }
+              };
+
+              return (
+                <tr
+                  key={key}
+                  role={interactive ? 'button' : undefined}
+                  tabIndex={interactive ? 0 : -1}
+                  aria-pressed={interactive ? isSelected : undefined}
+                  onClick={interactive ? () => onRowClick?.(row, index) : undefined}
+                  onKeyDown={handleKeyDown}
+                  style={{
+                    cursor: interactive ? 'pointer' : 'default',
+                    background: isSelected
+                      ? 'color-mix(in srgb, var(--accent) 10%, transparent)'
+                      : 'transparent',
+                    transition: 'background 150ms',
+                  }}
+                  className={cn(
+                    'hover-row',
+                    interactive ? 'hover:bg-bg-tertiary' : '',
+                  )}
+                  onMouseEnter={(event) => {
+                    if (interactive && !isSelected) {
+                      (event.currentTarget as HTMLTableRowElement).style.background =
+                        'var(--bg-tertiary)';
+                    }
+                  }}
+                  onMouseLeave={(event) => {
+                    (event.currentTarget as HTMLTableRowElement).style.background =
+                      isSelected
+                        ? 'color-mix(in srgb, var(--accent) 10%, transparent)'
+                        : 'transparent';
+                  }}
+                >
+                  {columns.map((col) => (
+                    <td
+                      key={col.key}
+                      style={{
+                        padding: '10px var(--space-4)',
+                        borderBottom: '1px solid var(--border-subtle)',
+                        height: rowHeight,
+                        fontSize: 'var(--text-sm)',
+                        color: 'var(--text-primary)',
+                      }}
+                      className={col.widthClassName}
+                    >
+                      {col.render
+                        ? col.render(row, index)
+                        : renderDefault(row, col.key)}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
     </div>
-  )
+  );
 }
+
+function LoadingRows<T>({
+  columns,
+  rowHeight,
+}: {
+  columns: DataTableColumn<T>[];
+  rowHeight: number;
+}) {
+  return (
+    <>
+      {Array.from({ length: 5 }).map((_, rowIndex) => (
+        <tr key={`skeleton-${rowIndex}`}>
+          {columns.map((col) => (
+            <td
+              key={col.key}
+              style={{
+                padding: '10px var(--space-4)',
+                borderBottom: '1px solid var(--border-subtle)',
+                height: rowHeight,
+              }}
+            >
+              <SkeletonLoader height={14} radius="sm" />
+            </td>
+          ))}
+        </tr>
+      ))}
+    </>
+  );
+}
+
+function renderDefault<T>(row: T, key: string): ReactNode {
+  if (row && typeof row === 'object' && key in (row as Record<string, unknown>)) {
+    const value = (row as Record<string, unknown>)[key];
+    if (value === null || value === undefined) return '—';
+    return String(value);
+  }
+  return '—';
+}
+
+export default DataTable;
