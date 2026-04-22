@@ -28,8 +28,8 @@ coverage
 *.sln
 *.sw?
 
-# Claude Code / Agent SDK scratch
-.claude/settings.local.json
+# Claude Code / Agent SDK scratch (developer-local tooling, not project source)
+.claude/
 .agents/
 
 # Internal review / working notes — not for public release
